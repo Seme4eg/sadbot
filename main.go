@@ -5,20 +5,20 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"sadbot/bot"
 	"sadbot/cmds"
+	"sadbot/utils"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
 )
 
 var (
-	config  bot.Config
+	config  utils.Config
 	session *discordgo.Session
 )
 
 func init() {
-	if err := bot.ReadConfig(&config); err != nil {
+	if err := utils.ReadConfig(&config); err != nil {
 		log.Fatal("Failed parse config file", err)
 	}
 }
@@ -64,8 +64,9 @@ func CommandHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	name := strings.ToLower(args[0])
 	if command, ok := cmds.Pool[name]; ok {
 		ctx := cmds.Ctx{
-			S: s,
-			M: m,
+			S:    s,
+			M:    m,
+			Args: args[1:], // strip command itself
 		}
 		command(ctx)
 	}

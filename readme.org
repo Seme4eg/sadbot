@@ -3,6 +3,18 @@
 - [[https://discord.com/developers/applications][discord applications page]]
 - [[https://discord.com/api/oauth2/authorize?client_id=1104687184537190441&permissions=274881440832&scope=bot][bot invite link]]
 
+** Deps
+- yt-dlp (maybe replace with some go-based analogue?)
+
+Optional dependencies for yt-dlp
+    ffmpeg: for video post-processing [installed]
+    rtmpdump: for rtmp streams support
+    atomicparsley: for embedding thumbnails into m4a files
+    aria2: for using aria2 as external downloader
+    python-mutagen: For embedding thumbnail in certain formats [installed]
+    python-pycryptodomex: For decrypting AES-128 HLS streams and various other data
+    python-websockets: For downloading over websocket
+
 ** Todos
 - respond in an [[https://0x2142.com/how-to-discordgo-bot/#generating-a-discord-embed-message][embed format]]?
 - session sharding

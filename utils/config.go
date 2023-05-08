@@ -1,4 +1,4 @@
-package bot
+package utils
 
 import (
 	"encoding/json"
