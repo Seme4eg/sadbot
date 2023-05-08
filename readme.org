@@ -4,7 +4,8 @@
 - [[https://discord.com/api/oauth2/authorize?client_id=1104687184537190441&permissions=274881440832&scope=bot][bot invite link]]
 
 ** Deps
-- yt-dlp (maybe replace with some go-based analogue?)
+- yt-dlp (maybe replace with some [[https://github.com/iawia002/lux][go-based]] [[https://pkg.go.dev/search?q=youtube-dl&m=package][analogue]](s)?)
+- cgo-git (AUR), *todo*: find opus driver without other deps?
 
 Optional dependencies for yt-dlp
     ffmpeg: for video post-processing [installed]
