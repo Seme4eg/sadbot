@@ -5,3 +5,4 @@
 
 ** Todos
 - respond in an [[https://0x2142.com/how-to-discordgo-bot/#generating-a-discord-embed-message][embed format]]?
+- session sharding

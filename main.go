@@ -2,24 +2,71 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"os"
+	"os/signal"
 	"sadbot/bot"
+	"sadbot/cmds"
+	"strings"
 
 	"github.com/bwmarrin/discordgo"
 )
 
 var (
-	config  *bot.Config
+	config  bot.Config
 	session *discordgo.Session
 )
 
+func init() {
+	if err := bot.ReadConfig(&config); err != nil {
+		log.Fatal("Failed parse config file", err)
+	}
+}
+
 func main() {
-	if err := bot.ReadConfig(config); err != nil {
+	var err error
+	// Create new Discord Session
+	if session, err = discordgo.New("Bot " + config.Token); err != nil {
+		fmt.Println(err.Error())
 		return
 	}
 
-	err := bot.Start(session, *config)
-	if err != nil {
+	session.AddHandler(CommandHandler) // adding event handler
+
+	if err := session.Open(); err != nil {
 		fmt.Println(err.Error())
 		return
+	}
+	// ensure that session will be gracefully closed whenever the function exits
+	defer session.Close()
+
+	fmt.Println("Bot is running !")
+
+	// run until code is terminated
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	<-c
+}
+
+func CommandHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
+	// ignore bot messages and all messages without needed prefix
+	if m.Author.ID == s.State.User.ID || !strings.HasPrefix(m.Content, config.Prefix) {
+		return
+	}
+
+	command := strings.TrimPrefix(m.Content, config.Prefix)
+
+	if len(command) < 1 {
+		return
+	}
+
+	args := strings.Fields(command)
+	name := strings.ToLower(args[0])
+	if command, ok := cmds.Pool[name]; ok {
+		ctx := cmds.Ctx{
+			S: s,
+			M: m,
+		}
+		command(ctx)
 	}
 }
