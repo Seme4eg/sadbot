@@ -6,8 +6,10 @@ import (
 	"os"
 	"os/signal"
 	"sadbot/cmds"
+	"sadbot/stream"
 	"sadbot/utils"
 	"strings"
+	"syscall"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -15,6 +17,7 @@ import (
 var (
 	config  utils.Config
 	session *discordgo.Session
+	Stream  *stream.Stream
 )
 
 func init() {
@@ -27,14 +30,24 @@ func main() {
 	var err error
 	// Create new Discord Session
 	if session, err = discordgo.New("Bot " + config.Token); err != nil {
-		fmt.Println(err.Error())
+		fmt.Println(err)
 		return
 	}
 
-	session.AddHandler(CommandHandler) // adding event handler
+	Stream = &stream.Stream{
+		S:    session,
+		Stop: make(chan bool),
+	}
+
+	// Register ready as a callback for the ready events.
+	session.AddHandler(ready)
+	// Register messageCreate as a callback for the messageCreate events.
+	session.AddHandler(messageCreate)
+	// Register guildCreate as a callback for the guildCreate events.
+	// session.AddHandler(guildCreate)
 
 	if err := session.Open(); err != nil {
-		fmt.Println(err.Error())
+		fmt.Println(err)
 		return
 	}
 	// ensure that session will be gracefully closed whenever the function exits
@@ -43,12 +56,20 @@ func main() {
 	fmt.Println("Bot is running !")
 
 	// run until code is terminated
+	fmt.Println("sadbot is now running.  Press CTRL-C to exit.")
 	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
+	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-c
 }
 
-func CommandHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
+// This function will be called when the bot receives
+// the "ready" event from Discord.
+func ready(s *discordgo.Session, event *discordgo.Ready) {
+	// Set the playing status.
+	s.UpdateListeningStatus(config.Prefix + "help")
+}
+
+func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	// ignore bot messages and all messages without needed prefix
 	if m.Author.ID == s.State.User.ID || !strings.HasPrefix(m.Content, config.Prefix) {
 		return
@@ -60,14 +81,27 @@ func CommandHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	args := strings.Fields(command)
-	name := strings.ToLower(args[0])
-	if command, ok := cmds.Pool[name]; ok {
-		ctx := cmds.Ctx{
-			S:    s,
-			M:    m,
-			Args: args[1:], // strip command itself
-		}
+	name := strings.Fields(command)[0]
+	args := strings.TrimPrefix(command, name+" ")
+	if command, ok := cmds.Pool[strings.ToLower(name)]; ok {
+		ctx := cmds.Ctx{S: s, M: m, Args: args, Stream: Stream}
 		command(ctx)
+	}
+}
+
+// This function will be called every time a new guild is joined.
+func guildCreate(s *discordgo.Session, event *discordgo.GuildCreate) {
+	if event.Unavailable {
+		return
+	}
+	for _, channel := range event.Channels {
+		if channel.ID == event.ID {
+			_, _ = s.ChannelMessageSend(
+				channel.ID,
+				fmt.Sprintf(
+					"sadbot is ready! Type %shelp to see what it's capable of.",
+					config.Prefix))
+			return
+		}
 	}
 }

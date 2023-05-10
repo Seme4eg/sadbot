@@ -1,4 +1,5 @@
 // credits to https://github.com/bwmarrin/dgvoice/blob/master/dgvoice.go
+// i only 'obfuscated' this file a bit
 
 package utils
 
@@ -7,10 +8,8 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"os"
 	"os/exec"
 	"strconv"
-	"sync"
 
 	"github.com/bwmarrin/discordgo"
 	"layeh.com/gopus"
@@ -28,147 +27,89 @@ const (
 var (
 	speakers    map[uint32]*gopus.Decoder
 	opusEncoder *gopus.Encoder
-	mu          sync.Mutex
+	// mu          sync.Mutex
 )
 
-// logs errors to STDERR
-var OnError = func(str string, err error) {
-	prefix := "dgVoice: " + str
+type AudioError string
 
-	if err != nil {
-		os.Stderr.WriteString(prefix + ": " + err.Error())
-	} else {
-		os.Stderr.WriteString(prefix)
-	}
+func (a AudioError) Error() string {
+	return "Audio module error: " + string(a)
 }
 
-// SendPCM will receive on the provied channel encode
-// received PCM data into Opus then send that to Discordgo
-func SendPCM(v *discordgo.VoiceConnection, pcm <-chan []int16) {
-	if pcm == nil {
-		return
-	}
-
-	var err error
-
-	opusEncoder, err = gopus.NewEncoder(frameRate, channels, gopus.Audio)
-
+// SendPCM receives on the provied channel
+// encodes received PCM data into Opus and sends that to Discordgo
+func SendPCM(v *discordgo.VoiceConnection, pcm <-chan []int16) error {
+	opusEncoder, err := gopus.NewEncoder(frameRate, channels, gopus.Audio)
 	if err != nil {
-		OnError("NewEncoder Error", err)
-		return
+		return AudioError("NewEncoder Error" + err.Error())
 	}
 
 	for {
-
 		// read pcm from chan, exit if channel is closed.
 		recv, ok := <-pcm
 		if !ok {
-			OnError("PCM Channel closed", nil)
-			return
+			return AudioError("PCM Channel closed")
 		}
 
 		// try encoding pcm frame with Opus
 		opus, err := opusEncoder.Encode(recv, frameSize, maxBytes)
 		if err != nil {
-			OnError("Encoding Error", err)
-			return
+			return AudioError("Encoding Error" + err.Error())
 		}
 
-		if v.Ready == false || v.OpusSend == nil {
-			// OnError(fmt.Sprintf("Discordgo not ready for opus packets. %+v : %+v", v.Ready, v.OpusSend), nil)
+		if !v.Ready || v.OpusSend == nil {
 			// Sending errors here might not be suited
-			return
+			return nil
 		}
+
 		// send encoded opus data to the sendOpus channel
 		v.OpusSend <- opus
 	}
 }
 
-// ReceivePCM will receive on the the Discordgo OpusRecv channel and decode
-// the opus audio into PCM then send it on the provided channel.
-func ReceivePCM(v *discordgo.VoiceConnection, c chan *discordgo.Packet) {
-	if c == nil {
-		return
-	}
-
-	var err error
-
-	for {
-		if v.Ready == false || v.OpusRecv == nil {
-			OnError(fmt.Sprintf("Discordgo not to receive opus packets. %+v : %+v", v.Ready, v.OpusSend), nil)
-			return
-		}
-
-		p, ok := <-v.OpusRecv
-		if !ok {
-			return
-		}
-
-		if speakers == nil {
-			speakers = make(map[uint32]*gopus.Decoder)
-		}
-
-		_, ok = speakers[p.SSRC]
-		if !ok {
-			speakers[p.SSRC], err = gopus.NewDecoder(48000, 2)
-			if err != nil {
-				OnError("error creating opus decoder", err)
-				continue
-			}
-		}
-
-		p.PCM, err = speakers[p.SSRC].Decode(p.Opus, 960, false)
-		if err != nil {
-			OnError("Error decoding opus data", err)
-			continue
-		}
-
-		c <- p
-	}
-}
-
 // PlayAudioFile will play the given filename to the already connected
-// Discord voice server/channel.  voice websocket and udp socket
+// Discord voice server/channel. voice websocket and udp socket
 // must already be setup before this will work.
-func PlayAudioFile(v *discordgo.VoiceConnection, filename string, stop <-chan bool) {
-
-	// Create a shell command "object" to run.
-	run := exec.Command("ffmpeg", "-i", filename, "-f", "s16le", "-ar", strconv.Itoa(frameRate), "-ac", strconv.Itoa(channels), "pipe:1")
-	ffmpegout, err := run.StdoutPipe()
+func PlayAudioFile(v *discordgo.VoiceConnection, filename string, stop <-chan bool) error {
+	// create ffmpeg command
+	ffmpeg := exec.Command("ffmpeg", "-i", filename, "-f", "s16le", "-ar",
+		strconv.Itoa(frameRate), "-ac", strconv.Itoa(channels), "pipe:1")
+	ffmpegout, err := ffmpeg.StdoutPipe()
 	if err != nil {
-		OnError("StdoutPipe Error", err)
-		return
+		return AudioError("StdoutPipe Error" + err.Error())
 	}
 
+	// read in chunks of 16KB (16 / 1024 bytes)
 	ffmpegbuf := bufio.NewReaderSize(ffmpegout, 16384)
 
 	// Starts the ffmpeg command
-	err = run.Start()
-	if err != nil {
-		OnError("RunStart Error", err)
-		return
+	if err = ffmpeg.Start(); err != nil {
+		return AudioError("RunStart Error" + err.Error())
 	}
 
 	// prevent memory leak from residual ffmpeg streams
-	defer run.Process.Kill()
+	defer ffmpeg.Process.Kill()
 
-	//when stop is sent, kill ffmpeg
+	// when stop is sent, kill ffmpeg
 	go func() {
 		<-stop
-		err = run.Process.Kill()
+		fmt.Println("stopped?")
+		err = ffmpeg.Process.Kill()
+		if err != nil {
+			fmt.Println("Error killing ffmpeg process:", err)
+		}
 	}()
 
 	// Send "speaking" packet over the voice websocket
-	err = v.Speaking(true)
-	if err != nil {
-		OnError("Couldn't set speaking", err)
+	if err = v.Speaking(true); err != nil {
+		return AudioError("Couldn't set speaking" + err.Error())
 	}
 
 	// Send not "speaking" packet over the websocket when we finish
 	defer func() {
 		err := v.Speaking(false)
 		if err != nil {
-			OnError("Couldn't stop speaking", err)
+			fmt.Println("Couldn't stop speaking:", err)
 		}
 	}()
 
@@ -177,7 +118,10 @@ func PlayAudioFile(v *discordgo.VoiceConnection, filename string, stop <-chan bo
 
 	close := make(chan bool)
 	go func() {
-		SendPCM(v, send)
+		err := SendPCM(v, send)
+		if err != nil {
+			fmt.Println("SendPCM error:", err)
+		}
 		close <- true
 	}()
 
@@ -186,18 +130,17 @@ func PlayAudioFile(v *discordgo.VoiceConnection, filename string, stop <-chan bo
 		audiobuf := make([]int16, frameSize*channels)
 		err = binary.Read(ffmpegbuf, binary.LittleEndian, &audiobuf)
 		if err == io.EOF || err == io.ErrUnexpectedEOF {
-			return
+			return nil
 		}
 		if err != nil {
-			OnError("error reading from ffmpeg stdout", err)
-			return
+			return AudioError("error reading from ffmpeg stdout" + err.Error())
 		}
 
 		// Send received PCM to the sendPCM channel
 		select {
 		case send <- audiobuf:
 		case <-close:
-			return
+			return nil
 		}
 	}
 }

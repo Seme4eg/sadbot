@@ -2,8 +2,8 @@ package cmds
 
 import (
 	"fmt"
-	"io/ioutil"
-	"sadbot/utils"
+	_ "io/ioutil"
+	_ "sadbot/utils"
 )
 
 func Play(ctx Ctx) {
@@ -12,23 +12,27 @@ func Play(ctx Ctx) {
 		return
 	}
 
-	vc, err := Join(ctx)
+	err := Join(ctx)
 	if err != nil {
-		fmt.Println("Failed to join voice channel:", err.Error())
+		fmt.Println("Failed to join voice channel:", err)
 		return
 	}
 
 	ctx.Reply("Adding songs to queue...") // XXX: maybe remove it
 
 	// Start loop and attempt to play all files in the given folder
-	fmt.Println("Reading Folder: ", ctx.Args[0])
-	files, _ := ioutil.ReadDir(ctx.Args[0])
-	for _, f := range files {
-		fmt.Println("PlayAudioFile:", f.Name())
-		ctx.S.UpdateWatchStatus(0, f.Name())
+	// fmt.Println("Reading Folder: ", ctx.Args[0])
+	// files, _ := ioutil.ReadDir(ctx.Args[0])
+	// for _, f := range files {
+	// 	fmt.Println("PlayAudioFile:", f.Name())
+	// 	ctx.S.UpdateWatchStatus(0, f.Name())
 
-		utils.PlayAudioFile(vc, fmt.Sprintf("%s/%s", ctx.Args[0], f.Name()), make(chan bool))
-	}
+	// 	err := utils.PlayAudioFile(vc,
+	// 		fmt.Sprintf("%s/%s", ctx.Args[0], f.Name()), make(chan bool))
+	// 	if err != nil {
+	// 		fmt.Println("Error playing audio file: ", err)
+	// 	}
+	// }
 
 	// for _, arg := range ctx.Args {
 	// 	t, inp, err := ctx.Youtube.Get(arg)

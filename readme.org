@@ -16,6 +16,46 @@ Optional dependencies for yt-dlp
     python-pycryptodomex: For decrypting AES-128 HLS streams and various other data
     python-websockets: For downloading over websocket
 
+** Prototyping
+
+!play <title|URL> — Searching sound with the given name or url.
+pause
+!skip — Skip current sound.
+!stop (clear ?) — Stop playback and clean queue.
+!repeat single/all/off — Repeating current sound. Repeating all queue. Repeating disabled.
+!shuffle/reshuffle — Shuffle sounds in queue. Shuffle queue again.
+!np (current) — Showing sound the bot is playing.
+!queue — Shows current queue.
+!pause — Pauses the current sound.
+
+help        - shows all available commands
+info        - shows bot info and statistics
+join        - joins your current voice channel (must be in a voice channel)
+stop        - stops playing the current song
+leave       - leaves the voice channel
+
+eval [code] - runs javascript (bot owner only)
+!save — Save current queue.
+!history — Show recently played sounds.
+!radio — Endless auto-generated radio based on selected genre.
+
+pick ?
+debug ?
+
 ** Todos
+#+begin_src go
+// logs errors to STDERR
+var ErrLog = func(str string, err error) {
+	prefix := "audio module: " + str
+	if err != nil {
+		os.Stderr.WriteString(prefix + ": " + err.Error())
+	} else {
+		os.Stderr.WriteString(prefix)
+	}
+}
+#+end_src
+
+- query type? connectionn type?
 - respond in an [[https://0x2142.com/how-to-discordgo-bot/#generating-a-discord-embed-message][embed format]]?
 - session sharding
+- make custom error interface for each package?
