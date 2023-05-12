@@ -18,21 +18,23 @@ Optional dependencies for yt-dlp
 
 ** Prototyping
 
-!play <title|URL> — Searching sound with the given name or url.
+*Playback*: 
+!play <title|URL> - require user in voice, join bot
 pause
-!skip — Skip current sound.
+!skip (next) - require user and bot in voice
 !stop (clear ?) — Stop playback and clean queue.
-!repeat single/all/off — Repeating current sound. Repeating all queue. Repeating disabled.
-!shuffle/reshuffle — Shuffle sounds in queue. Shuffle queue again.
-!np (current) — Showing sound the bot is playing.
-!queue — Shows current queue.
-!pause — Pauses the current sound.
+!repeat single/all/off
+!shuffle/reshuffle
 
-help        - shows all available commands
-info        - shows bot info and statistics
-join        - joins your current voice channel (must be in a voice channel)
-stop        - stops playing the current song
-leave       - leaves the voice channel
+leave - require user and bot in voice
+
+*subject to change, but for require presence:*
+- !np (current) — Showing sound the bot is playing.
+- !queue — Shows current queue.
+
+*no presence:*
+- help        - shows all available commands
+- info        - shows bot info and statistics
 
 eval [code] - runs javascript (bot owner only)
 !save — Save current queue.
@@ -57,5 +59,8 @@ var ErrLog = func(str string, err error) {
 
 - query type? connectionn type?
 - respond in an [[https://0x2142.com/how-to-discordgo-bot/#generating-a-discord-embed-message][embed format]]?
+- [[https://github.com/yt-dlp/yt-dlp#usage-and-options][yt-dlp]]
+- change config format to [[https://github.com/lon9/discord-generalized-sound-bot/blob/master/bot/bot.go#L324][yaml]]
+- [[https://github.com/bwmarrin/discordgo/wiki/Awesome-DiscordGo][references]]
 - session sharding
 - make custom error interface for each package?

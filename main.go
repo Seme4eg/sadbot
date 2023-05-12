@@ -56,7 +56,7 @@ func main() {
 	fmt.Println("Bot is running !")
 
 	// run until code is terminated
-	fmt.Println("sadbot is now running.  Press CTRL-C to exit.")
+	fmt.Println("sadbot is now running. Press CTRL-C to exit.")
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-c

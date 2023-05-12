@@ -33,9 +33,12 @@ var Pool = map[string]func(ctx Ctx){
 	"leave":      Leave,
 	"play":       Play,
 	"p":          Play,
+	"pause":      Pause,
 	"playfolder": PlayFolder,
 	"pf":         PlayFolder,
 	"next":       Next,
+	"clear":      Clear,
+	"stop":       Stop,
 }
 
 // Commands that r in this file are not exposed to the user and can't be called

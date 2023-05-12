@@ -11,12 +11,15 @@ func Leave(ctx Ctx) {
 
 	// return in case bot is already connected to some channel
 	if ctx.Stream.V != nil {
+		// TODO: here (or maybe in leave command ye), and on 'join' event play
+		// some japanese sounds like 'hi' and 'bye' , better from anime
+		Stop(ctx)
 		err := ctx.Stream.V.Disconnect()
 		if err != nil {
 			fmt.Println("Error leaving voice channel:", err)
 		}
 	} else {
-		ctx.Reply("I'm not in vc")
+		ctx.Reply("You can check out any time you like, but you can never leave.")
 		return
 	}
 }

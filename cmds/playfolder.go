@@ -37,14 +37,11 @@ func PlayFolder(ctx Ctx) {
 
 	// TODO: output here which tracks got added to queue
 
-	fmt.Println(filepath.FromSlash(ctx.Args), "normalized?")
 	files, err := ioutil.ReadDir(filepath.FromSlash(ctx.Args))
 	if err != nil {
 		fmt.Println("ReadDir error:", err)
 		return
 	}
-
-	fmt.Println(files)
 
 	// add tracks to queue
 	for _, f := range files {

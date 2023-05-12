@@ -10,6 +10,7 @@ import (
 	"io"
 	"os/exec"
 	"strconv"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"layeh.com/gopus"
@@ -70,7 +71,7 @@ func SendPCM(v *discordgo.VoiceConnection, pcm <-chan []int16) error {
 // PlayAudioFile will play the given filename to the already connected
 // Discord voice server/channel. voice websocket and udp socket
 // must already be setup before this will work.
-func PlayAudioFile(v *discordgo.VoiceConnection, filename string, stop <-chan bool) error {
+func PlayAudioFile(v *discordgo.VoiceConnection, filename string, stop <-chan bool, playing *bool) error {
 	// create ffmpeg command
 	ffmpeg := exec.Command("ffmpeg", "-i", filename, "-f", "s16le", "-ar",
 		strconv.Itoa(frameRate), "-ac", strconv.Itoa(channels), "pipe:1")
@@ -93,7 +94,6 @@ func PlayAudioFile(v *discordgo.VoiceConnection, filename string, stop <-chan bo
 	// when stop is sent, kill ffmpeg
 	go func() {
 		<-stop
-		fmt.Println("stopped?")
 		err = ffmpeg.Process.Kill()
 		if err != nil {
 			fmt.Println("Error killing ffmpeg process:", err)
@@ -126,6 +126,11 @@ func PlayAudioFile(v *discordgo.VoiceConnection, filename string, stop <-chan bo
 	}()
 
 	for {
+		// means player was paused by the user, check every second on status change
+		if !*playing {
+			time.Sleep(1 * time.Second)
+			continue
+		}
 		// read data from ffmpeg stdout
 		audiobuf := make([]int16, frameSize*channels)
 		err = binary.Read(ffmpegbuf, binary.LittleEndian, &audiobuf)
