@@ -20,13 +20,10 @@ Optional dependencies for yt-dlp
 
 *Playback*: 
 !play <title|URL> - require user in voice, join bot
-pause
-!skip (next) - require user and bot in voice
-!stop (clear ?) — Stop playback and clean queue.
 !repeat single/all/off
 !shuffle/reshuffle
 
-leave - require user and bot in voice
+!history — Show recently played sounds.
 
 *subject to change, but for require presence:*
 - !np (current) — Showing sound the bot is playing.
@@ -36,9 +33,7 @@ leave - require user and bot in voice
 - help        - shows all available commands
 - info        - shows bot info and statistics
 
-eval [code] - runs javascript (bot owner only)
-!save — Save current queue.
-!history — Show recently played sounds.
+!save — Save current queue (within current bot session?)
 !radio — Endless auto-generated radio based on selected genre.
 
 pick ?
@@ -57,10 +52,10 @@ var ErrLog = func(str string, err error) {
 }
 #+end_src
 
-- query type? connectionn type?
 - respond in an [[https://0x2142.com/how-to-discordgo-bot/#generating-a-discord-embed-message][embed format]]?
 - [[https://github.com/yt-dlp/yt-dlp#usage-and-options][yt-dlp]]
 - change config format to [[https://github.com/lon9/discord-generalized-sound-bot/blob/master/bot/bot.go#L324][yaml]]
 - [[https://github.com/bwmarrin/discordgo/wiki/Awesome-DiscordGo][references]]
 - session sharding
+- fix ~SendPCM error: Audio module error: PCM Channel closed~ log after each track
 - make custom error interface for each package?

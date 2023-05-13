@@ -17,10 +17,27 @@ type Ctx struct {
 	Stream *stream.Stream
 }
 
-func (c Ctx) Reply(msg string) {
-	_, err := c.S.ChannelMessageSend(c.M.ChannelID, msg)
+func (c *Ctx) Reply(msg string) {
+	messages, err := c.S.ChannelMessages(c.M.ChannelID, 10, "", "", "")
 	if err != nil {
-		fmt.Println("Failed to send message to channel: ", err)
+		fmt.Println("Error retrieving channel messages:", err)
+	}
+
+	// delete last bot message to not flood the channel
+	// first message in slice is last in channel
+	for _, m := range messages {
+		if m.Author.ID == c.S.State.User.ID {
+			err := c.S.ChannelMessageDelete(m.ChannelID, m.ID)
+			if err != nil {
+				fmt.Println("Error deleting previous message:", err)
+			}
+			break
+		}
+	}
+
+	_, err = c.S.ChannelMessageSend(c.M.ChannelID, msg)
+	if err != nil {
+		fmt.Println("Failed to send message to channel:", err)
 	}
 }
 
@@ -37,8 +54,14 @@ var Pool = map[string]func(ctx Ctx){
 	"playfolder": PlayFolder,
 	"pf":         PlayFolder,
 	"next":       Next,
+	"skip":       Next,
 	"clear":      Clear,
 	"stop":       Stop,
+	"repeat":     Repeat,
+	"shuffle":    Shuffle,
+	"queue":      Queue,
+	"nowplaying": NowPlaying,
+	"np":         NowPlaying,
 }
 
 // Commands that r in this file are not exposed to the user and can't be called

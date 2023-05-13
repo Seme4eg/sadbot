@@ -1,6 +1,8 @@
 package cmds
 
-import "fmt"
+import (
+	"fmt"
+)
 
 func Stop(ctx Ctx) {
 	err := RequirePresence(ctx)
@@ -8,6 +10,7 @@ func Stop(ctx Ctx) {
 		fmt.Println(err)
 		return
 	}
-	Clear(ctx)
-	ctx.Stream.Stop <- true
+
+	ctx.Stream.Reset(true)
+	ctx.Reply("Player stopped, queue cleared")
 }

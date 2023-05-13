@@ -10,10 +10,10 @@ func Shuffle(ctx Ctx) {
 	}
 	switch ctx.Args {
 	case "off":
-		ctx.Stream.Shuffle()
+		ctx.Stream.UnShuffle()
 		ctx.Reply("Shuffling turned off.")
 	default:
-		ctx.Stream.UnShuffle()
+		ctx.Stream.Shuffle()
 		ctx.Reply("Shuffling turned on.")
 	}
 }

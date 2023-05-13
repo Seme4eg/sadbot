@@ -35,8 +35,9 @@ func main() {
 	}
 
 	Stream = &stream.Stream{
-		S:    session,
-		Stop: make(chan bool),
+		S:      session,
+		Stop:   make(chan bool),
+		Repeat: stream.RepeatOff,
 	}
 
 	// Register ready as a callback for the ready events.

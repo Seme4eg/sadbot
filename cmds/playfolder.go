@@ -2,11 +2,12 @@ package cmds
 
 import (
 	"fmt"
-	"io/ioutil"
 	"path/filepath"
 	"sadbot/stream"
 	"strings"
 )
+
+var formats = []string{"mp3", "flac", "wav", "opus"}
 
 // plays files from local folder (for now doesn't support standalones for now)
 func PlayFolder(ctx Ctx) {
@@ -35,23 +36,27 @@ func PlayFolder(ctx Ctx) {
 	// Start loop and attempt to play all files in the given folder
 	fmt.Println("Reading Folder: ", ctx.Args)
 
-	// TODO: output here which tracks got added to queue
-
-	files, err := ioutil.ReadDir(filepath.FromSlash(ctx.Args))
-	if err != nil {
-		fmt.Println("ReadDir error:", err)
-		return
+	var trackPaths []string
+	for _, f := range formats {
+		path := filepath.Join(ctx.Args, "*."+f)
+		paths, err := filepath.Glob(path)
+		if err != nil {
+			fmt.Println("Error getting", f, "files from dir:", err)
+		}
+		trackPaths = append(trackPaths, paths...)
 	}
 
 	// add tracks to queue
-	for _, f := range files {
-		// TODO: not sure is Song type must b part of 'stream' module
+	for _, path := range trackPaths {
+		name := strings.TrimPrefix(path, ctx.Args+"/")
 		ctx.Stream.Queue = append(ctx.Stream.Queue, stream.Song{
-			Title: f.Name(),
-			// source - full path to the file
-			Source: ctx.Args + "/" + f.Name(),
+			Title:  name,
+			Source: path, // full path to the file
+			Index:  len(ctx.Stream.Queue),
 		})
 	}
+
+	Queue(ctx)
 
 	err = ctx.Stream.Play()
 	if err != nil {

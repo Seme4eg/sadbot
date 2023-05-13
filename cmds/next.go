@@ -8,15 +8,13 @@ func Next(ctx Ctx) {
 		fmt.Println(err)
 		return
 	}
-	if len(ctx.Stream.Queue) == 0 {
-		ctx.Reply("Nothing to play, add tracks first.")
-		return
+	errMessage := ctx.Stream.Next()
+	if errMessage != "" {
+		ctx.Reply(errMessage)
+	} else {
+		// TODO: maybe if there gonna b many times i will need 'current' song
+		// make it a 'Stream' method
+		// for now it's here and in 'nowplaying' command
+		ctx.Reply("Now playing: " + ctx.Stream.Queue[ctx.Stream.SongIndex].Title)
 	}
-	ctx.Stream.Playing = true
-	if len(ctx.Stream.Queue) == 1 {
-		ctx.Reply("Last track in queue")
-		return
-	}
-	// sends stop signal to current ffmpeg command stopping it
-	ctx.Stream.Stop <- true
 }
