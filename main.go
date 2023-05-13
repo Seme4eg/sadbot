@@ -15,13 +15,14 @@ import (
 )
 
 var (
-	config  utils.Config
+	config  *utils.Config
 	session *discordgo.Session
 	Stream  *stream.Stream
 )
 
 func init() {
-	if err := utils.ReadConfig(&config); err != nil {
+	var err error
+	if config, err = utils.NewConfig(); err != nil {
 		log.Fatal("Failed parse config file", err)
 	}
 }

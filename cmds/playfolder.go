@@ -31,8 +31,6 @@ func PlayFolder(ctx Ctx) {
 		return
 	}
 
-	ctx.Reply("Adding songs to queue...") // XXX: maybe remove it
-
 	// Start loop and attempt to play all files in the given folder
 	fmt.Println("Reading Folder: ", ctx.Args)
 

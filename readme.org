@@ -18,18 +18,8 @@ Optional dependencies for yt-dlp
 
 ** Prototyping
 
-*Playback*: 
-!play <title|URL> - require user in voice, join bot
-!repeat single/all/off
-!shuffle/reshuffle
-
-!history — Show recently played sounds.
-
-*subject to change, but for require presence:*
-- !np (current) — Showing sound the bot is playing.
-- !queue — Shows current queue.
-
-*no presence:*
+- !play <title|URL> - require user in voice, join bot
+- !history — Show recently played sounds.
 - help        - shows all available commands
 - info        - shows bot info and statistics
 
@@ -56,6 +46,8 @@ var ErrLog = func(str string, err error) {
 - [[https://github.com/yt-dlp/yt-dlp#usage-and-options][yt-dlp]]
 - change config format to [[https://github.com/lon9/discord-generalized-sound-bot/blob/master/bot/bot.go#L324][yaml]]
 - [[https://github.com/bwmarrin/discordgo/wiki/Awesome-DiscordGo][references]]
+- Reply f-n now deletes prev message always, even if it's from prev session,
+  which isn't a big deal, but is an unobvious behavious, subject for fix
 - session sharding
 - fix ~SendPCM error: Audio module error: PCM Channel closed~ log after each track
 - make custom error interface for each package?

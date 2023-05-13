@@ -1,21 +1,22 @@
 package utils
 
 import (
-	"encoding/json"
 	"io/ioutil"
+
+	"gopkg.in/yaml.v3"
 )
 
 type Config struct {
-	Token  string `json:"token"`
-	Prefix string `json:"prefix"`
+	Token  string `yaml:"token"`
+	Prefix string `yaml:"prefix"`
 }
 
-func ReadConfig(config *Config) (err error) {
+func NewConfig() (config *Config, err error) {
 	var file []byte
-	if file, err = ioutil.ReadFile("config.json"); err != nil {
+	if file, err = ioutil.ReadFile("config.yml"); err != nil {
 		return
 	}
-	if err = json.Unmarshal(file, config); err != nil {
+	if err = yaml.Unmarshal(file, &config); err != nil {
 		return
 	}
 	return
