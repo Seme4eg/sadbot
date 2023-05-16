@@ -36,17 +36,13 @@ func main() {
 	}
 
 	Stream = &stream.Stream{
-		S:      session,
 		Stop:   make(chan bool),
 		Repeat: stream.RepeatOff,
 	}
 
-	// Register ready as a callback for the ready events.
-	session.AddHandler(ready)
-	// Register messageCreate as a callback for the messageCreate events.
-	session.AddHandler(messageCreate)
-	// Register guildCreate as a callback for the guildCreate events.
-	// session.AddHandler(guildCreate)
+	session.AddHandler(ready)         // ready events.
+	session.AddHandler(messageCreate) // messageCreate events.
+	// session.AddHandler(guildCreate) guildCreate events.
 
 	if err := session.Open(); err != nil {
 		fmt.Println(err)
@@ -55,7 +51,7 @@ func main() {
 	// ensure that session will be gracefully closed whenever the function exits
 	defer session.Close()
 
-	fmt.Println("Bot is running !")
+	fmt.Println("Bot is running!")
 
 	// run until code is terminated
 	fmt.Println("sadbot is now running. Press CTRL-C to exit.")
@@ -83,12 +79,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	name := strings.Fields(command)[0]
-	args := strings.TrimPrefix(command, name+" ")
-	if command, ok := cmds.Pool[strings.ToLower(name)]; ok {
-		ctx := cmds.Ctx{S: s, M: m, Args: args, Stream: Stream}
-		command(ctx)
-	}
+	cmds.Handle(command, s, m, Stream, config.Prefix)
 }
 
 // This function will be called every time a new guild is joined.

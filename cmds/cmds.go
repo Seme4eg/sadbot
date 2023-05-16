@@ -3,9 +3,31 @@ package cmds
 import (
 	"fmt"
 	"sadbot/stream"
+	"strings"
 
 	"github.com/bwmarrin/discordgo"
 )
+
+var commands = map[string]func(Ctx){
+	"ping": func(ctx Ctx) {
+		_, _ = ctx.S.ChannelMessageSend(ctx.M.ChannelID, "pong")
+	},
+	"play":       Play,
+	"p":          Play,
+	"playfolder": PlayFolder,
+	"pf":         PlayFolder,
+	"pause":      Pause,
+	"stop":       Stop,
+	"next":       Next,
+	"skip":       Next,
+	"clear":      Clear,
+	"leave":      Leave,
+	"repeat":     Repeat,
+	"shuffle":    Shuffle,
+	"queue":      Queue,
+	"nowplaying": NowPlaying,
+	"np":         NowPlaying,
+}
 
 // context for each separate message adressed to bot
 type Ctx struct {
@@ -15,6 +37,7 @@ type Ctx struct {
 	// there are functions (like playfolder) that don't need a pre-splitted args
 	Args   string
 	Stream *stream.Stream
+	Prefix string
 }
 
 func (c *Ctx) Reply(msg string) {
@@ -39,29 +62,6 @@ func (c *Ctx) Reply(msg string) {
 	if err != nil {
 		fmt.Println("Failed to send message to channel:", err)
 	}
-}
-
-// most likely will change in future, object with aliases and commands
-// it will evolve / change when i will b writing functionality for 'help' f-n
-var Pool = map[string]func(ctx Ctx){
-	"ping": func(ctx Ctx) {
-		_, _ = ctx.S.ChannelMessageSend(ctx.M.ChannelID, "pong")
-	},
-	"leave":      Leave,
-	"play":       Play,
-	"p":          Play,
-	"pause":      Pause,
-	"playfolder": PlayFolder,
-	"pf":         PlayFolder,
-	"next":       Next,
-	"skip":       Next,
-	"clear":      Clear,
-	"stop":       Stop,
-	"repeat":     Repeat,
-	"shuffle":    Shuffle,
-	"queue":      Queue,
-	"nowplaying": NowPlaying,
-	"np":         NowPlaying,
 }
 
 // Commands that r in this file are not exposed to the user and can't be called
@@ -111,4 +111,15 @@ func RequirePresence(ctx Ctx) error {
 	}
 
 	return nil
+}
+
+func Handle(command string, s *discordgo.Session,
+	m *discordgo.MessageCreate, stream *stream.Stream, prefix string) {
+	name := strings.Fields(command)[0]
+	args := strings.TrimPrefix(command, name+" ")
+
+	if command, ok := commands[strings.ToLower(name)]; ok {
+		ctx := Ctx{S: s, M: m, Args: args, Stream: stream, Prefix: prefix}
+		command(ctx)
+	}
 }

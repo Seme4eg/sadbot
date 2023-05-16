@@ -42,12 +42,13 @@ var ErrLog = func(str string, err error) {
 }
 #+end_src
 
-- respond in an [[https://0x2142.com/how-to-discordgo-bot/#generating-a-discord-embed-message][embed format]]?
+- prev command
+- skipto <index> command (based on those indexes in queue)
 - [[https://github.com/yt-dlp/yt-dlp#usage-and-options][yt-dlp]]
 - [[https://github.com/bwmarrin/discordgo/wiki/Awesome-DiscordGo][references]]
 - Reply f-n now deletes prev message always, even if it's from prev session,
   which isn't a big deal, but is an unobvious behavious, subject for fix
-- add sync mutex to stream struct
+- maybe add some more options to config? like how many tracks to show in queue?
 - session sharding
 - fix ~SendPCM error: Audio module error: PCM Channel closed~ log after each track
 - make custom error interface for each package?

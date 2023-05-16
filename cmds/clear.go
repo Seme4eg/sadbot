@@ -8,7 +8,6 @@ func Clear(ctx Ctx) {
 		fmt.Println(err)
 		return
 	}
-	ctx.Stream.Queue = ctx.Stream.Queue[:0]
-	ctx.Stream.SongIndex = 0
+	ctx.Stream.Clear()
 	ctx.Reply("Queue cleared")
 }

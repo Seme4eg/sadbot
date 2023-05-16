@@ -3,7 +3,6 @@ package cmds
 import (
 	"fmt"
 	"path/filepath"
-	"sadbot/stream"
 	"strings"
 )
 
@@ -31,10 +30,10 @@ func PlayFolder(ctx Ctx) {
 		return
 	}
 
-	// Start loop and attempt to play all files in the given folder
-	fmt.Println("Reading Folder: ", ctx.Args)
+	fmt.Println("Reading Folder:", ctx.Args)
 
 	var trackPaths []string
+	// add files of each listed format to slice
 	for _, f := range formats {
 		path := filepath.Join(ctx.Args, "*."+f)
 		paths, err := filepath.Glob(path)
@@ -46,20 +45,18 @@ func PlayFolder(ctx Ctx) {
 
 	// add tracks to queue
 	for _, path := range trackPaths {
-		name := strings.TrimPrefix(path, ctx.Args+"/")
-		ctx.Stream.Queue = append(ctx.Stream.Queue, stream.Song{
-			Title:  name,
-			Source: path, // full path to the file
-			Index:  len(ctx.Stream.Queue),
-		})
+		title := strings.TrimPrefix(path, ctx.Args+"/")
+		ctx.Stream.Add(path, title)
 	}
 
-	Queue(ctx)
+	go Queue(ctx)
 
+	ctx.S.UpdateListeningStatus(ctx.Stream.Current())
 	err = ctx.Stream.Play()
 	if err != nil {
 		fmt.Println("Error streaming:", err)
 		return
 	}
-
+	// TODO: check if it updates to help
+	ctx.S.UpdateListeningStatus(ctx.Prefix + "help")
 }

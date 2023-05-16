@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"sadbot/utils"
 	"sort"
+	"sync"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -21,11 +22,9 @@ const (
 // 1 stream per 1 session, holds info about voice connection state, and other
 // 'player' stuff like queue etc
 type Stream struct {
-
 	// NOTE: when adding new field don't forget to reset it on events like
 	// leave, stop and clear
-
-	S *discordgo.Session
+	sync.Mutex
 	V *discordgo.VoiceConnection
 
 	Queue     []Song
@@ -56,9 +55,6 @@ func (s *Stream) Play() error {
 		s.SongIndex = 0
 
 		song := s.Queue[s.SongIndex]
-
-		fmt.Println("PlayAudioFile:", song.Title)
-		s.S.UpdateListeningStatus(song.Title)
 
 		err := utils.PlayAudioFile(s.V, song.Source, s.Stop, &s.Playing)
 		if err != nil {
@@ -110,6 +106,8 @@ func (s *Stream) Reset(withoutVoiceChan bool) {
 
 // randomise queue except 1st song
 func (s *Stream) Shuffle() {
+	s.Lock()
+	defer s.Unlock()
 	currentSong := s.Queue[s.SongIndex]
 	// create temporary 'queue' value that doesn't contain currently playing
 	// track since after each shuffle we want it to be still first in queue
@@ -120,14 +118,20 @@ func (s *Stream) Shuffle() {
 	s.Queue = append([]Song{currentSong}, temp...)
 }
 
+// sorts queue based on songs initial index
 func (s *Stream) UnShuffle() {
+	s.Lock()
+	defer s.Unlock()
 	// sort queue in ascending order by index field
 	sort.Slice(s.Queue, func(i, j int) bool {
 		return s.Queue[i].Index < s.Queue[j].Index
 	})
 }
 
+// sets stream repeat state and returns response string
 func (s *Stream) SetRepeat(state string) (response string) {
+	s.Lock()
+	defer s.Unlock()
 	switch RepeatState(state) {
 	case RepeatSingle:
 		s.Repeat = RepeatSingle
@@ -145,12 +149,34 @@ func (s *Stream) SetRepeat(state string) (response string) {
 }
 
 func (s *Stream) Next() string {
+	s.Lock()
 	if s.SongIndex+1 >= len(s.Queue) {
 		return "Either last song in the queue or no songs in it"
 	}
 
 	s.Playing = true
+	s.Unlock()
 	// sends stop signal to current ffmpeg command stopping it
 	s.Stop <- true
 	return ""
+}
+
+func (s *Stream) Clear() {
+	s.Lock()
+	defer s.Unlock()
+	s.Queue = s.Queue[:0]
+	s.SongIndex = 0
+}
+
+func (s *Stream) Current() string {
+	if len(s.Queue) == 0 {
+		return ""
+	}
+	return s.Queue[s.SongIndex].Title
+}
+
+func (s *Stream) Add(Source, Title string) {
+	s.Lock()
+	defer s.Unlock()
+	s.Queue = append(s.Queue, Song{Title, Source, len(s.Queue)})
 }
