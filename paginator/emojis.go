@@ -11,7 +11,7 @@ const (
 	NavRight       = "➡"
 	NavLeft        = "⬅"
 	NavEnd         = "⏩"
-	NavBeginning   = "⏪"
+	NavStart       = "⏪"
 	NavInformation = "ℹ"
 	// NavSave        = "💾"
 )

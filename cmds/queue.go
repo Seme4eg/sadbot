@@ -47,9 +47,6 @@ func Queue(ctx Ctx) {
 		p.Add(embed)
 	}
 
-	// Sets the footers of all added pages to their page numbers.
-	p.SetPageFooters()
-
 	// REVIEW: should query message also be some kind of a 'player' ?
 	// i can add custom handlers here like play / pause / stop / clear / save
 	// Add a custom handler for the gun reaction.

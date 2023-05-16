@@ -42,7 +42,7 @@ var ErrLog = func(str string, err error) {
 }
 #+end_src
 
-- prev command
+- history + prev command
 - skipto <index> command (based on those indexes in queue)
 - [[https://github.com/yt-dlp/yt-dlp#usage-and-options][yt-dlp]]
 - [[https://github.com/bwmarrin/discordgo/wiki/Awesome-DiscordGo][references]]
