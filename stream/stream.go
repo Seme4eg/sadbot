@@ -226,3 +226,16 @@ func (s *Stream) Add(Source, Title string) {
 	defer s.Unlock()
 	s.Queue = append(s.Queue, Song{Title, Source, len(s.Queue)})
 }
+
+func (s *Stream) Skipto(index int) error {
+	s.Lock()
+	if index <= 0 || index > len(s.Queue) {
+		return errors.New("no song with such index")
+	}
+
+	s.SongIndex = index
+
+	s.Unlock()
+	s.Stop <- true
+	return nil
+}

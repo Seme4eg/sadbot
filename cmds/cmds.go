@@ -20,6 +20,7 @@ var commands = map[string]func(Ctx){
 	"stop":       Stop,
 	"next":       Next,
 	"skip":       Next,
+	"skipto":     Skipto,
 	"clear":      Clear,
 	"leave":      Leave,
 	"repeat":     Repeat,
