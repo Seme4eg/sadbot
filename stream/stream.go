@@ -1,11 +1,13 @@
 package stream
 
 import (
+	"errors"
 	"fmt"
 	"math/rand"
 	"sadbot/utils"
 	"sort"
 	"sync"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -106,7 +108,7 @@ func (s *Stream) Play() error {
 // since it needs to reset Stream in the same way except Voice Channel
 // cuz it's still in one
 func (s *Stream) Reset(withoutVoiceChan bool) {
-	s.Stop <- true
+	s.Lock()
 	if !withoutVoiceChan {
 		s.V = nil
 	}
@@ -115,6 +117,8 @@ func (s *Stream) Reset(withoutVoiceChan bool) {
 	s.Playing = false
 	s.Repeat = RepeatOff
 	s.SkipIndexUpdate = false
+	s.Unlock()
+	s.Stop <- true
 }
 
 // randomise queue except 1st song

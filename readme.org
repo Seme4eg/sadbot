@@ -26,9 +26,6 @@ Optional dependencies for yt-dlp
 !save — Save current queue (within current bot session?)
 !radio — Endless auto-generated radio based on selected genre.
 
-pick ?
-debug ?
-
 ** Todos
 #+begin_src go
 // logs errors to STDERR
@@ -42,13 +39,13 @@ var ErrLog = func(str string, err error) {
 }
 #+end_src
 
-- history + prev command
-- skipto <index> command (based on those indexes in queue)
+- update queue command based on what i did
 - [[https://github.com/yt-dlp/yt-dlp#usage-and-options][yt-dlp]]
 - [[https://github.com/bwmarrin/discordgo/wiki/Awesome-DiscordGo][references]]
 - Reply f-n now deletes prev message always, even if it's from prev session,
   which isn't a big deal, but is an unobvious behavious, subject for fix
 - maybe add some more options to config? like how many tracks to show in queue?
+- teach bot to leave after x time when no1 in voice
 - session sharding
 - fix ~SendPCM error: Audio module error: PCM Channel closed~ log after each track
 - make custom error interface for each package?

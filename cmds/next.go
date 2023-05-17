@@ -9,8 +9,8 @@ func Next(ctx Ctx) {
 		return
 	}
 
-	if errMessage := ctx.Stream.Next(); errMessage != "" {
-		ctx.Reply(errMessage)
+	if err := ctx.Stream.Next(); err != nil {
+		ctx.Reply(err.Error())
 	} else {
 		ctx.Reply("Now playing: " + ctx.Stream.Current())
 	}
