@@ -58,34 +58,40 @@ func New() *Stream {
 func (s *Stream) Play() error {
 	s.Playing = true
 
-	for len(s.Queue) > 0 {
-		s.SongIndex = 0
+	for len(s.Queue) > 0 && s.SongIndex >= 0 && s.SongIndex < len(s.Queue) && s.Playing {
 
 		song := s.Queue[s.SongIndex]
 
-		err := utils.PlayAudioFile(s.V, song.Source, s.Stop, &s.Playing)
-		if err != nil {
-			fmt.Println("Error playing audio file: ", err)
-			s.Playing = false
-			return err
-		}
-
-		if s.Repeat == RepeatOff && len(s.Queue) > 0 {
-			s.Queue = s.Queue[1:]
-		} else if s.Repeat == RepeatAll {
-			if s.SongIndex+1 >= len(s.Queue) {
-				s.SongIndex = 0
-			} else {
-				s.SongIndex++
+		done := make(chan bool)
+		defer close(done)
+		go func() {
+			err := utils.PlayAudioFile(s.V, song.Source, s.Stop, &s.Playing)
+			if err != nil {
+				fmt.Println("Error playing audio file: ", err)
 			}
-		}
-		// in case of RepeatSingle nothing changes and song index remains same
+			close(done)
+		}()
 
-		// 'next' command doesn't set this flag to 'false' but 'stop' does so we
-		// need to check it here
-		if !s.Playing {
-			break
+		select {
+		// in case play function finished playing on its own (wasn't affected by
+		// user commands) - skip to next song
+		case <-done:
+			fmt.Println("entered done case")
+			if s.Repeat != RepeatSingle {
+				if err := s.Next(); err != nil {
+					fmt.Println("error nexting:", err)
+					s.Playing = false
+					return err
+				}
+			}
+		case <-s.Stop:
+			s.Stop <- true // also stop current ffmpeg process
+			// prevent ffmpeg processes from overlapping (especially on prev command)
+			time.Sleep(time.Millisecond * 350)
+			// otherwise do nothing cuz it means user is skipping / preving
+			continue
 		}
+
 	}
 
 	s.Playing = false
@@ -155,17 +161,50 @@ func (s *Stream) SetRepeat(state string) (response string) {
 	}
 }
 
-func (s *Stream) Next() string {
+func (s *Stream) Next() error {
 	s.Lock()
-	if s.SongIndex+1 >= len(s.Queue) {
-		return "Either last song in the queue or no songs in it"
+
+	s.Playing = false
+	s.SongIndex++
+
+	if s.SongIndex >= len(s.Queue) {
+		switch s.Repeat {
+		case RepeatAll:
+			s.SongIndex = 0
+		case RepeatOff:
+			s.SongIndex--
+			return errors.New("either last song in the queue or no songs in it")
+		}
 	}
 
 	s.Playing = true
 	s.Unlock()
 	// sends stop signal to current ffmpeg command stopping it
 	s.Stop <- true
-	return ""
+	return nil
+}
+
+func (s *Stream) Prev() error {
+	s.Lock()
+
+	s.Playing = false
+	s.SongIndex--
+
+	if s.SongIndex < 0 {
+		switch s.Repeat {
+		case RepeatAll:
+			s.SongIndex = len(s.Queue) - 1
+		case RepeatOff:
+			s.SongIndex++
+			return errors.New("nothing was played before")
+		}
+	}
+
+	s.Playing = true
+	s.Unlock()
+	// sends stop signal to current ffmpeg command stopping it
+	s.Stop <- true
+	return nil
 }
 
 func (s *Stream) Clear() {
