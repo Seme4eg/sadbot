@@ -19,7 +19,7 @@ func Queue(ctx Ctx) {
 	perPage := 10
 	// needed for further format function, whether to number tracks 01 or 001
 	numLen := len(fmt.Sprint(len(ctx.Stream.Queue)))
-	formatStr := "%0" + fmt.Sprint(numLen) + "d "
+	formatNum := "%0" + fmt.Sprint(numLen) + "d "
 
 	for i := 0; i < len(ctx.Stream.Queue); i += perPage {
 
@@ -37,9 +37,13 @@ func Queue(ctx Ctx) {
 		}
 
 		for j := i; j <= maxLen; j++ {
+			formatName := "**%s** – %s"
+			if j == ctx.Stream.SongIndex {
+				formatName = "**%s** – **%s**"
+			}
 			field := discordgo.MessageEmbedField{
-				Value: fmt.Sprintf("**%s** – %s",
-					fmt.Sprintf(formatStr, j+1), ctx.Stream.Queue[j].Title),
+				Value: fmt.Sprintf(formatName,
+					fmt.Sprintf(formatNum, j+1), ctx.Stream.Queue[j].Title),
 			}
 			embed.Fields = append(embed.Fields, &field)
 		}
@@ -49,10 +53,7 @@ func Queue(ctx Ctx) {
 
 	// REVIEW: should query message also be some kind of a 'player' ?
 	// i can add custom handlers here like play / pause / stop / clear / save
-	// Add a custom handler for the gun reaction.
-	// p.Widget.Handle("🔫", func(w *paginator.Widget, r *discordgo.MessageReaction) {
-	// 	ctx.S.ChannelMessageSend(ctx.M.ChannelID, "Bang!")
-	// })
+	// p.Handle("+", func() { ctx.S.ChannelMessageSend(ctx.M.ChannelID, "Hi!") })
 
 	p.Spawn()
 }
