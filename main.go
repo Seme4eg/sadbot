@@ -35,10 +35,7 @@ func main() {
 		return
 	}
 
-	Stream = &stream.Stream{
-		Stop:   make(chan bool),
-		Repeat: stream.RepeatOff,
-	}
+	Stream = stream.New()
 
 	session.AddHandler(ready)         // ready events.
 	session.AddHandler(messageCreate) // messageCreate events.

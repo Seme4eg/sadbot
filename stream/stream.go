@@ -48,6 +48,13 @@ type Song struct {
 	// TODO: Duration string
 }
 
+func New() *Stream {
+	return &Stream{
+		Stop:   make(chan bool),
+		Repeat: RepeatOff,
+	}
+}
+
 func (s *Stream) Play() error {
 	s.Playing = true
 
