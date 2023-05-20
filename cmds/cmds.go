@@ -25,10 +25,16 @@ var commands = map[string]func(Ctx){
 	"clear":      Clear,
 	"leave":      Leave,
 	"repeat":     Repeat,
-	"shuffle":    Shuffle,
-	"queue":      Queue,
-	"nowplaying": NowPlaying,
-	"np":         NowPlaying,
+	"loop": func(ctx Ctx) {
+		ctx.Args = "all"
+		Repeat(ctx)
+	},
+	"shuffle":   Shuffle,
+	"unshuffle": Unshuffle,
+	"queue":     Queue,
+	"q":         Queue,
+	"np":        NowPlaying,
+	"help":      Help,
 }
 
 // context for each separate message adressed to bot
