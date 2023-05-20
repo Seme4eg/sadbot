@@ -6,6 +6,7 @@ package utils
 import (
 	"bufio"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"os/exec"
@@ -26,36 +27,30 @@ const (
 )
 
 var (
-	speakers    map[uint32]*gopus.Decoder
-	opusEncoder *gopus.Encoder
-	// mu          sync.Mutex
+	speakers     map[uint32]*gopus.Decoder
+	opusEncoder  *gopus.Encoder
+	ErrPcmClosed = errors.New("err: PCM Channel closed")
 )
-
-type AudioError string
-
-func (a AudioError) Error() string {
-	return "Audio module error: " + string(a)
-}
 
 // SendPCM receives on the provied channel
 // encodes received PCM data into Opus and sends that to Discordgo
 func SendPCM(v *discordgo.VoiceConnection, pcm <-chan []int16) error {
 	opusEncoder, err := gopus.NewEncoder(frameRate, channels, gopus.Audio)
 	if err != nil {
-		return AudioError("NewEncoder Error" + err.Error())
+		return err
 	}
 
 	for {
 		// read pcm from chan, exit if channel is closed.
 		recv, ok := <-pcm
 		if !ok {
-			return AudioError("PCM Channel closed")
+			return ErrPcmClosed
 		}
 
 		// try encoding pcm frame with Opus
 		opus, err := opusEncoder.Encode(recv, frameSize, maxBytes)
 		if err != nil {
-			return AudioError("Encoding Error" + err.Error())
+			return err
 		}
 
 		if !v.Ready || v.OpusSend == nil {
@@ -71,13 +66,41 @@ func SendPCM(v *discordgo.VoiceConnection, pcm <-chan []int16) error {
 // PlayAudioFile will play the given filename to the already connected
 // Discord voice server/channel. voice websocket and udp socket
 // must already be setup before this will work.
-func PlayAudioFile(v *discordgo.VoiceConnection, filename string, stop <-chan bool, playing *bool) error {
-	// create ffmpeg command
-	ffmpeg := exec.Command("ffmpeg", "-i", filename, "-f", "s16le", "-ar",
+func PlayAudioFile(v *discordgo.VoiceConnection, source string, stop <-chan bool, playing *bool) error {
+	var (
+		ytdlp    *exec.Cmd
+		ytdlpOut io.ReadCloser
+		err      error
+	)
+
+	isUrl := IsUrl(source)
+
+	if isUrl {
+		ytdlp = exec.Command("yt-dlp", "--no-part", "--downloader", "ffmpeg",
+			"--buffer-size", "16K", "--limit-rate", "50K", "-o", "-", "-f", "bestaudio", source)
+		// since ytdlp is now source of ffmpeg command we need to change source
+		// to "-" so ffmpeg reads from pipe
+		source = "-"
+		ytdlpOut, err = ytdlp.StdoutPipe()
+		if err != nil {
+			return err
+		}
+		if err := ytdlp.Start(); err != nil {
+			return err
+		}
+		defer ytdlp.Process.Kill()
+	}
+
+	ffmpeg := exec.Command("ffmpeg", "-i", source, "-f", "s16le", "-ar",
 		strconv.Itoa(frameRate), "-ac", strconv.Itoa(channels), "pipe:1")
+
+	if isUrl {
+		ffmpeg.Stdin = ytdlpOut
+	}
+
 	ffmpegout, err := ffmpeg.StdoutPipe()
 	if err != nil {
-		return AudioError("StdoutPipe Error" + err.Error())
+		return err
 	}
 
 	// read in chunks of 16KB (16 / 1024 bytes)
@@ -85,7 +108,7 @@ func PlayAudioFile(v *discordgo.VoiceConnection, filename string, stop <-chan bo
 
 	// Starts the ffmpeg command
 	if err = ffmpeg.Start(); err != nil {
-		return AudioError("RunStart Error" + err.Error())
+		return err
 	}
 
 	// prevent memory leak from residual ffmpeg streams
@@ -102,7 +125,7 @@ func PlayAudioFile(v *discordgo.VoiceConnection, filename string, stop <-chan bo
 
 	// Send "speaking" packet over the voice websocket
 	if err = v.Speaking(true); err != nil {
-		return AudioError("Couldn't set speaking" + err.Error())
+		return err
 	}
 
 	// Send not "speaking" packet over the websocket when we finish
@@ -120,7 +143,10 @@ func PlayAudioFile(v *discordgo.VoiceConnection, filename string, stop <-chan bo
 	go func() {
 		err := SendPCM(v, send)
 		if err != nil {
-			fmt.Println("SendPCM error:", err)
+			// ignore pcm closed error since it appears on every process end
+			if !errors.Is(err, ErrPcmClosed) {
+				fmt.Println("SendPCM error:", err)
+			}
 		}
 		close <- true
 	}()
@@ -138,7 +164,7 @@ func PlayAudioFile(v *discordgo.VoiceConnection, filename string, stop <-chan bo
 			return nil
 		}
 		if err != nil {
-			return AudioError("error reading from ffmpeg stdout" + err.Error())
+			return err
 		}
 
 		// Send received PCM to the sendPCM channel
