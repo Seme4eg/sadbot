@@ -59,11 +59,14 @@ func (p *Paginator) addReactions() {
 }
 
 // Spawn spawns the paginator in channel p.ChannelID
-func (p *Paginator) Spawn() error {
+func (p *Paginator) Spawn(index ...int) error {
 	// Sets the footers of all added pages to their page numbers.
 	p.SetPageFooters()
 
-	p.Embed = p.Pages[p.Index]
+	if index[0] != 0 {
+		p.Index = index[0]
+	}
+	p.Embed = p.Pages[index[0]]
 
 	// Create initial message.
 	msg, err := p.Ses.ChannelMessageSendEmbed(p.ChannelID, p.Embed)
