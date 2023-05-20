@@ -9,9 +9,9 @@ func Prev(ctx Ctx) {
 		return
 	}
 
-	if err := ctx.Stream.Prev(); err != nil {
+	if err := ctx.Stream().Prev(); err != nil {
 		ctx.Reply(err.Error())
 	} else {
-		ctx.Reply("Now playing: " + ctx.Stream.Current())
+		ctx.Reply("Now playing: " + ctx.Stream().Current())
 	}
 }

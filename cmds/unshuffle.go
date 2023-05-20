@@ -8,6 +8,6 @@ func Unshuffle(ctx Ctx) {
 		fmt.Println(err)
 		return
 	}
-	ctx.Stream.UnShuffle()
+	ctx.Stream().UnShuffle()
 	ctx.Reply("Shuffling turned off.")
 }

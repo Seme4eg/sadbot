@@ -20,6 +20,11 @@ const (
 	RepeatAll    RepeatState = "all"
 )
 
+type Streams struct {
+	// keys are guildid since it seems reasonable to store 1 stream per guild
+	List map[string]*Stream
+}
+
 // didn't go for interface here cuz it seemed redundant
 // 1 stream per 1 session, holds info about voice connection state, and other
 // 'player' stuff like queue etc
@@ -35,11 +40,6 @@ type Stream struct {
 	Playing bool
 	Repeat  RepeatState
 
-	// after shuffle / unshuffle commands queue changes and current song index
-	// in queue is already different song, so in order to not skip over it
-	// this flag is needed
-	SkipIndexUpdate bool
-
 	Stop chan bool
 }
 
@@ -50,8 +50,9 @@ type Song struct {
 	// TODO: Duration string
 }
 
-func New() *Stream {
+func New(vc *discordgo.VoiceConnection) *Stream {
 	return &Stream{
+		V:      vc,
 		Stop:   make(chan bool),
 		Repeat: RepeatOff,
 	}
@@ -103,18 +104,25 @@ func (s *Stream) Play() error {
 // withoutVoiceChan flag is passed for now only when using Stop command
 // since it needs to reset Stream in the same way except Voice Channel
 // cuz it's still in one
-func (s *Stream) Reset(withoutVoiceChan bool) {
+func (s *Stream) Reset() {
 	s.Lock()
-	if !withoutVoiceChan {
-		s.V = nil
-	}
+	defer s.Unlock()
 	s.Playing = false
-	s.Queue = []Song{}
+	s.Queue = s.Queue[:0]
 	s.SongIndex = 0
 	s.Repeat = RepeatOff
-	s.SkipIndexUpdate = false
-	s.Unlock()
-	s.Stop <- true
+	select {
+	case s.Stop <- true:
+	default:
+		fmt.Println("Stop Channel is closed")
+	}
+}
+
+func (s *Stream) Clear() {
+	s.Lock()
+	defer s.Unlock()
+	s.Queue = s.Queue[:0]
+	s.SongIndex = 0
 }
 
 // randomise queue except 1st song
@@ -167,10 +175,11 @@ func (s *Stream) SetRepeat(state string) error {
 	return nil
 }
 
+// kills current playback, skips to next track
 func (s *Stream) Next() error {
 	s.Lock()
+	defer s.Unlock()
 
-	s.Playing = false
 	s.SongIndex++
 
 	if s.SongIndex >= len(s.Queue) {
@@ -179,22 +188,19 @@ func (s *Stream) Next() error {
 			s.SongIndex = 0
 		case RepeatOff:
 			s.SongIndex--
-			s.Unlock()
 			return errors.New("either last song in the queue or no songs in it")
 		}
 	}
 
-	s.Playing = true
-	s.Unlock()
-	// sends stop signal to current ffmpeg command stopping it
 	s.Stop <- true
 	return nil
 }
 
+// kills current playback, skips to previous track
 func (s *Stream) Prev() error {
 	s.Lock()
+	defer s.Unlock()
 
-	s.Playing = false
 	s.SongIndex--
 
 	if s.SongIndex < 0 {
@@ -203,23 +209,12 @@ func (s *Stream) Prev() error {
 			s.SongIndex = len(s.Queue) - 1
 		case RepeatOff:
 			s.SongIndex++
-			s.Unlock()
 			return errors.New("nothing was played before")
 		}
 	}
 
-	s.Playing = true
-	s.Unlock()
-	// sends stop signal to current ffmpeg command stopping it
 	s.Stop <- true
 	return nil
-}
-
-func (s *Stream) Clear() {
-	s.Lock()
-	defer s.Unlock()
-	s.Queue = s.Queue[:0]
-	s.SongIndex = 0
 }
 
 func (s *Stream) Current() string {
@@ -248,4 +243,13 @@ func (s *Stream) Skipto(index int) error {
 	s.Unlock()
 	s.Stop <- true
 	return nil
+}
+
+func (s *Stream) Disconnect() error {
+	s.Reset()
+	return s.V.Disconnect()
+}
+
+func (s *Stream) Pause() {
+	s.Playing = false
 }

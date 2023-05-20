@@ -8,5 +8,5 @@ func Pause(ctx Ctx) {
 		fmt.Println(err)
 		return
 	}
-	ctx.Stream.Playing = false
+	ctx.Stream().Pause()
 }

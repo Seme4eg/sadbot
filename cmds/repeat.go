@@ -9,7 +9,7 @@ func Repeat(ctx Ctx) {
 		return
 	}
 
-	err = ctx.Stream.SetRepeat(ctx.Args)
+	err = ctx.Stream().SetRepeat(ctx.Args)
 	if err != nil {
 		ctx.Reply(fmt.Sprintf("Usage: **%srepeat single | all | off**", ctx.Prefix))
 		return
@@ -17,10 +17,10 @@ func Repeat(ctx Ctx) {
 	// kinda hardcode but user responses should be handled here, not in Stream
 	switch ctx.Args {
 	case "single":
-		ctx.Reply(fmt.Sprintf("Now repeating: **%s**", ctx.Stream.Current()))
+		ctx.Reply(fmt.Sprintf("Now repeating: **%s**", ctx.Stream().Current()))
 	case "all":
 		ctx.Reply(
-			fmt.Sprintf("Now repeating **%s** songs", fmt.Sprint(len(ctx.Stream.Queue))))
+			fmt.Sprintf("Now repeating **%s** songs", fmt.Sprint(len(ctx.Stream().Queue))))
 	case "off":
 		ctx.Reply("Repeat turned off")
 	}

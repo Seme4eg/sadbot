@@ -14,7 +14,7 @@ func Play(ctx Ctx) {
 	}
 
 	// join voice in case bot is not in one
-	if ctx.Stream.V == nil {
+	if ctx.Stream().V == nil {
 		err := Join(ctx)
 		if err != nil {
 			fmt.Println("Failed to join voice channel:", err)
@@ -25,7 +25,7 @@ func Play(ctx Ctx) {
 	args := strings.TrimSpace(ctx.Args)
 
 	if args == "" {
-		ctx.Stream.Playing = true
+		ctx.Stream().Playing = true
 		return
 	}
 
@@ -35,18 +35,12 @@ func Play(ctx Ctx) {
 	}
 
 	for _, t := range res {
-		ctx.Stream.Add(t.Url, t.Title)
+		ctx.Stream().Add(t.Url, t.Title)
 	}
 
 	go Queue(ctx)
 
-	ctx.S.UpdateListeningStatus(ctx.Stream.Current())
-	err = ctx.Stream.Play()
-	if err != nil {
+	if err := ctx.Stream().Play(); err != nil {
 		fmt.Println("Error streaming:", err)
-		return
 	}
-	// TODO: check if it updates to help
-	ctx.S.UpdateListeningStatus(ctx.Prefix + "help")
-
 }

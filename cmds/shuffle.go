@@ -8,6 +8,6 @@ func Shuffle(ctx Ctx) {
 		fmt.Println(err)
 		return
 	}
-	ctx.Stream.Shuffle()
+	ctx.Stream().Shuffle()
 	ctx.Reply("Shuffling turned on.")
 }

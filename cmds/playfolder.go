@@ -17,7 +17,7 @@ func PlayFolder(ctx Ctx) {
 	}
 
 	// join voice in case bot is not in one
-	if ctx.Stream.V == nil {
+	if ctx.Stream().V == nil {
 		err := Join(ctx)
 		if err != nil {
 			fmt.Println("Failed to join voice channel:", err)
@@ -46,17 +46,13 @@ func PlayFolder(ctx Ctx) {
 	// add tracks to queue
 	for _, path := range trackPaths {
 		title := strings.TrimPrefix(path, ctx.Args+"/")
-		ctx.Stream.Add(path, title)
+		ctx.Stream().Add(path, title)
 	}
 
 	go Queue(ctx)
 
-	ctx.S.UpdateListeningStatus(ctx.Stream.Current())
-	err = ctx.Stream.Play()
-	if err != nil {
+	if err := ctx.Stream().Play(); err != nil {
 		fmt.Println("Error streaming:", err)
 		return
 	}
-	// TODO: check if it updates to help
-	ctx.S.UpdateListeningStatus(ctx.Prefix + "help")
 }

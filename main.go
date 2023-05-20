@@ -17,7 +17,7 @@ import (
 var (
 	config  *utils.Config
 	session *discordgo.Session
-	Stream  *stream.Stream
+	Streams *stream.Streams
 )
 
 func init() {
@@ -35,7 +35,7 @@ func main() {
 		return
 	}
 
-	Stream = stream.New()
+	Streams = &stream.Streams{List: make(map[string]*stream.Stream)}
 
 	session.AddHandler(ready)         // ready events.
 	session.AddHandler(messageCreate) // messageCreate events.
@@ -76,7 +76,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	cmds.Handle(command, s, m, Stream, config.Prefix)
+	cmds.Handle(command, s, m, Streams, config.Prefix)
 }
 
 // This function will be called every time a new guild is joined.

@@ -16,16 +16,6 @@ Optional dependencies for yt-dlp
     python-pycryptodomex: For decrypting AES-128 HLS streams and various other data
     python-websockets: For downloading over websocket
 
-** Prototyping
-
-- !play <title|URL> - require user in voice, join bot
-- !history — Show recently played sounds.
-- help        - shows all available commands
-- info        - shows bot info and statistics
-
-!save — Save current queue (within current bot session?)
-!radio — Endless auto-generated radio based on selected genre.
-
 ** Todos
 #+begin_src go
 // logs errors to STDERR

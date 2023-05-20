@@ -19,9 +19,9 @@ func Skipto(ctx Ctx) {
 	}
 
 	// -1 so in stream method we work with 0-based indecies
-	if err := ctx.Stream.Skipto(index - 1); err != nil {
+	if err := ctx.Stream().Skipto(index - 1); err != nil {
 		ctx.Reply(err.Error())
 	} else {
-		ctx.Reply("Now playing: " + ctx.Stream.Current())
+		ctx.Reply("Now playing: " + ctx.Stream().Current())
 	}
 }

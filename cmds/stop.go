@@ -11,6 +11,6 @@ func Stop(ctx Ctx) {
 		return
 	}
 
-	ctx.Stream.Reset(true)
+	ctx.Stream().Reset()
 	ctx.Reply("Player stopped, queue cleared")
 }

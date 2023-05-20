@@ -8,6 +8,6 @@ func Clear(ctx Ctx) {
 		fmt.Println(err)
 		return
 	}
-	ctx.Stream.Clear()
+	ctx.Stream().Clear()
 	ctx.Reply("Queue cleared")
 }
