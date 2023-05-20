@@ -8,12 +8,6 @@ func Shuffle(ctx Ctx) {
 		fmt.Println(err)
 		return
 	}
-	switch ctx.Args {
-	case "off":
-		ctx.Stream.UnShuffle()
-		ctx.Reply("Shuffling turned off.")
-	default:
-		ctx.Stream.Shuffle()
-		ctx.Reply("Shuffling turned on.")
-	}
+	ctx.Stream.Shuffle()
+	ctx.Reply("Shuffling turned on.")
 }

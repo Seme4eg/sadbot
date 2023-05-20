@@ -133,16 +133,29 @@ func (s *Stream) Shuffle() {
 		temp[i], temp[j] = temp[j], temp[i]
 	})
 	s.Queue = append([]Song{currentSong}, temp...)
+	s.SongIndex = 0
+	fmt.Println(len(s.Queue), "len")
 }
 
 // sorts queue based on songs initial index
 func (s *Stream) UnShuffle() {
 	s.Lock()
 	defer s.Unlock()
+	// get index of currently playing song
+	curIndex := s.Queue[s.SongIndex].Index
+
 	// sort queue in ascending order by index field
 	sort.Slice(s.Queue, func(i, j int) bool {
 		return s.Queue[i].Index < s.Queue[j].Index
 	})
+
+	// upate currently playing song index
+	for i, t := range s.Queue {
+		if t.Index == curIndex {
+			s.SongIndex = i
+			break
+		}
+	}
 }
 
 // sets stream repeat state and returns response string
