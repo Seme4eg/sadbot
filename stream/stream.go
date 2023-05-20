@@ -62,23 +62,20 @@ func (s *Stream) Play() error {
 
 	for len(s.Queue) > 0 && s.SongIndex >= 0 && s.SongIndex < len(s.Queue) && s.Playing {
 
-		song := s.Queue[s.SongIndex]
-
 		done := make(chan bool)
-		defer close(done)
+		// defer close(done)
 		go func() {
-			err := utils.PlayAudioFile(s.V, song.Source, s.Stop, &s.Playing)
+			err := utils.PlayAudioFile(s.V, s.Queue[s.SongIndex].Source, s.Stop, &s.Playing)
 			if err != nil {
 				fmt.Println("Error playing audio file: ", err)
 			}
-			close(done)
+			done <- true
 		}()
 
 		select {
 		// in case play function finished playing on its own (wasn't affected by
 		// user commands) - skip to next song
 		case <-done:
-			fmt.Println("entered done case")
 			if s.Repeat != RepeatSingle {
 				if err := s.Next(); err != nil {
 					fmt.Println("error nexting:", err)
@@ -93,7 +90,6 @@ func (s *Stream) Play() error {
 			// otherwise do nothing cuz it means user is skipping / preving
 			continue
 		}
-
 	}
 
 	s.Playing = false
@@ -112,9 +108,9 @@ func (s *Stream) Reset(withoutVoiceChan bool) {
 	if !withoutVoiceChan {
 		s.V = nil
 	}
+	s.Playing = false
 	s.Queue = []Song{}
 	s.SongIndex = 0
-	s.Playing = false
 	s.Repeat = RepeatOff
 	s.SkipIndexUpdate = false
 	s.Unlock()
@@ -159,23 +155,16 @@ func (s *Stream) UnShuffle() {
 }
 
 // sets stream repeat state and returns response string
-func (s *Stream) SetRepeat(state string) (response string) {
+func (s *Stream) SetRepeat(state string) error {
 	s.Lock()
 	defer s.Unlock()
-	switch RepeatState(state) {
-	case RepeatSingle:
-		s.Repeat = RepeatSingle
-		return "Now repeating " + s.Queue[s.SongIndex].Title
-	case RepeatAll:
-		s.Repeat = RepeatAll
-		// no matter len of what we take here - shuffled queue or not, length's same
-		return "Now repeating " + fmt.Sprint(len(s.Queue)) + " songs"
-	case RepeatOff:
-		s.Repeat = RepeatOff
-		return "Repeating turned off"
+	switch val := RepeatState(state); val {
+	case RepeatSingle, RepeatAll, RepeatOff:
+		s.Repeat = val
 	default:
-		return "Usage: <prefix>repeat single | all | off"
+		return errors.New("invalid repeat state passed")
 	}
+	return nil
 }
 
 func (s *Stream) Next() error {
@@ -190,6 +179,7 @@ func (s *Stream) Next() error {
 			s.SongIndex = 0
 		case RepeatOff:
 			s.SongIndex--
+			s.Unlock()
 			return errors.New("either last song in the queue or no songs in it")
 		}
 	}
@@ -213,6 +203,7 @@ func (s *Stream) Prev() error {
 			s.SongIndex = len(s.Queue) - 1
 		case RepeatOff:
 			s.SongIndex++
+			s.Unlock()
 			return errors.New("nothing was played before")
 		}
 	}
