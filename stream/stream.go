@@ -229,6 +229,7 @@ func (s *Stream) Current() string {
 	return s.Queue[s.SongIndex].Title
 }
 
+// TODO: add easyer support for more fields
 func (s *Stream) Add(Source, Title string) {
 	s.Lock()
 	defer s.Unlock()
@@ -236,10 +237,11 @@ func (s *Stream) Add(Source, Title string) {
 }
 
 func (s *Stream) Skipto(index int) error {
-	s.Lock()
 	if index <= 0 || index > len(s.Queue) {
 		return errors.New("no song with such index")
 	}
+
+	s.Lock()
 
 	s.SongIndex = index
 
