@@ -91,6 +91,15 @@ func PlayAudioFile(v *discordgo.VoiceConnection, source string, stop <-chan bool
 		if err := ytdlp.Start(); err != nil {
 			return err
 		}
+
+		// FIXME: still sometimes skips to next song before current finished playing
+		// Prevent yt-dlp command to finish before ffmpeg is done reading its output
+		go func() {
+			if err := ytdlp.Wait(); err != nil {
+				fmt.Println("error waiting for ytdlp to finish:", err)
+			}
+		}()
+
 		defer ytdlp.Process.Kill()
 	}
 
@@ -122,6 +131,12 @@ func PlayAudioFile(v *discordgo.VoiceConnection, source string, stop <-chan bool
 		err = ffmpeg.Process.Kill()
 		if err != nil {
 			fmt.Println("Error killing ffmpeg process:", err)
+		}
+		if isUrl {
+			err = ytdlp.Process.Kill()
+			if err != nil {
+				fmt.Println("Error killing ytdlp process:", err)
+			}
 		}
 	}()
 
