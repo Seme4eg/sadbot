@@ -1,4 +1,4 @@
-module sadbot
+module github.com/seme4eg/sadbot
 
 go 1.20
 

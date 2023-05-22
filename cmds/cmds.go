@@ -2,7 +2,7 @@ package cmds
 
 import (
 	"fmt"
-	"sadbot/stream"
+	"github.com/seme4eg/sadbot/stream"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"

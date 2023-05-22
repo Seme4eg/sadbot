@@ -3,11 +3,11 @@ package main
 import (
 	"fmt"
 	"log"
+	"github.com/seme4eg/sadbot/cmds"
+	"github.com/seme4eg/sadbot/stream"
+	"github.com/seme4eg/sadbot/utils"
 	"os"
 	"os/signal"
-	"sadbot/cmds"
-	"sadbot/stream"
-	"sadbot/utils"
 	"strings"
 	"syscall"
 

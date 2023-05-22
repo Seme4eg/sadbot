@@ -2,8 +2,8 @@ package cmds
 
 import (
 	"fmt"
+	"github.com/seme4eg/sadbot/paginator"
 	"math"
-	"sadbot/paginator"
 
 	"github.com/bwmarrin/discordgo"
 )

@@ -3,8 +3,8 @@ package stream
 import (
 	"errors"
 	"fmt"
+	"github.com/seme4eg/sadbot/utils"
 	"math/rand"
-	"sadbot/utils"
 	"sort"
 	"sync"
 	"time"
