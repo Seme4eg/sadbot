@@ -29,7 +29,7 @@ func Play(ctx Ctx) {
 	args := strings.TrimSpace(ctx.Args)
 
 	if args == "" {
-		ctx.Stream().Playing = true
+		ctx.Stream().Unpause()
 		return
 	}
 
