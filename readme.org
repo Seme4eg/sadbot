@@ -1,5 +1,7 @@
 #+title: sad discord music bot
 
+[[assets/queue.png]]
+
 ** Usage
 Create a ~config.yml~, set your bot token there.
 
