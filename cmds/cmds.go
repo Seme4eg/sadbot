@@ -87,14 +87,9 @@ func (c *Ctx) Reply(msg string) {
 
 // Commands that r in this file are not exposed to the user and can't be called
 
-// joins voice, sets ctx VoiceConnection to streams map
+// Join joins voice, sets ctx VoiceConnection to streams map.
+// For now is called only by Play and Playfolder f-s.
 func Join(ctx Ctx) error {
-	err := RequirePresence(ctx)
-	if err != nil {
-		fmt.Println(err)
-		return err
-	}
-
 	// Get the voice state for the given guild and user
 	VoiceState, err := ctx.S.State.VoiceState(ctx.M.GuildID, ctx.M.Author.ID)
 	if err != nil {
