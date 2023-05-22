@@ -1,5 +1,7 @@
 // credits to https://github.com/bwmarrin/dgvoice/blob/master/dgvoice.go
-// i only 'obfuscated' this file a bit
+// i only added urls support, piping from yt-dlp if passed string was url,
+// pause support and obfuscated this file a bit. All changes can be seen in this
+// file git history.
 
 package utils
 
@@ -66,6 +68,7 @@ func SendPCM(v *discordgo.VoiceConnection, pcm <-chan []int16) error {
 // PlayAudioFile will play the given filename to the already connected
 // Discord voice server/channel. voice websocket and udp socket
 // must already be setup before this will work.
+// FIXME: split this huge function
 func PlayAudioFile(v *discordgo.VoiceConnection, source string, stop <-chan bool, playing *bool) error {
 	var (
 		ytdlp    *exec.Cmd
@@ -106,7 +109,6 @@ func PlayAudioFile(v *discordgo.VoiceConnection, source string, stop <-chan bool
 	// read in chunks of 16KB (16 / 1024 bytes)
 	ffmpegbuf := bufio.NewReaderSize(ffmpegout, 16384)
 
-	// Starts the ffmpeg command
 	if err = ffmpeg.Start(); err != nil {
 		return err
 	}

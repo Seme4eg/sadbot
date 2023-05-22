@@ -11,6 +11,7 @@ type Config struct {
 	Prefix string `yaml:"prefix"`
 }
 
+// NewConfig returns unmarshals config.yml file and returns new Config struct.
 func NewConfig() (config *Config, err error) {
 	var file []byte
 	if file, err = ioutil.ReadFile("config.yml"); err != nil {

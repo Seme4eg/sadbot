@@ -2,6 +2,8 @@ package cmds
 
 import "fmt"
 
+// Prev calls current guild's stream Prev method. On success replies
+// with current track name.
 func Prev(ctx Ctx) {
 	err := RequirePresence(ctx)
 	if err != nil {

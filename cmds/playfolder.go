@@ -8,7 +8,10 @@ import (
 
 var formats = []string{"mp3", "flac", "wav", "opus"}
 
-// plays files from local folder (for now doesn't support standalones for now)
+// PlayFolder joins bot to voice if it is not in one. Processes given
+// folder, calls current stream Add method for each processed track (file).
+// When done replies with currnet queue. Then calls for Play method.
+// (doesn't support standalones for now)
 func PlayFolder(ctx Ctx) {
 	err := RequirePresence(ctx)
 	if err != nil {

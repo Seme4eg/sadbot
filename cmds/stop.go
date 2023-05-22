@@ -4,6 +4,7 @@ import (
 	"fmt"
 )
 
+// Stop calls current guild's stream Reset method.
 func Stop(ctx Ctx) {
 	err := RequirePresence(ctx)
 	if err != nil {

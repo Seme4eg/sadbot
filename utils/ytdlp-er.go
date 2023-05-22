@@ -6,14 +6,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/url"
 	"os/exec"
 	"strings"
 	"sync"
-	"time"
 )
 
+// YtResult struct holds yt-dlp command output
 type YtResult struct {
 	Title    string  `json:"title"`
 	Uploader string  `json:"uploader"`
@@ -21,16 +20,10 @@ type YtResult struct {
 	Url      string  `json:"webpage_url"`
 }
 
+// ProcessQuery determines the type of given query - urls or search.
+// Gets information from yt-dlp on each url / search and returns as a slice
+// of parsed results.
 func ProcessQuery(query string) ([]YtResult, error) {
-	log.SetFlags(log.LstdFlags)
-
-	log.Printf("Starting processing query at %v", time.Now())
-	startTime := time.Now()
-	defer func() {
-		duration := time.Since(startTime)
-		log.Printf("Finished processing query in %v, took %v", time.Now(), duration)
-	}()
-
 	t, err := QueryType(query)
 	if err != nil {
 		return []YtResult{}, err
@@ -59,8 +52,8 @@ func ProcessQuery(query string) ([]YtResult, error) {
 	return []YtResult{}, errors.New("something went wrong when determining query type")
 }
 
-// checks if all whitespace-separated strings are either urls or just strings
-// returns false in case there's a mix of both
+// QueryType checks if all whitespace-separated strings are either urls or just
+// strings returns false in case there's a mix of both.
 func QueryType(query string) (string, error) {
 	allUrls := true
 	allWords := true
@@ -80,6 +73,7 @@ func QueryType(query string) (string, error) {
 	return "", errors.New("either all arguments must be urls or none")
 }
 
+// IsUrl determines if given string is a url.
 func IsUrl(link string) bool {
 	parsedURL, err := url.ParseRequestURI(link)
 	if err != nil || parsedURL.Scheme == "" || parsedURL.Host == "" {
@@ -89,7 +83,7 @@ func IsUrl(link string) bool {
 	}
 }
 
-// calls yt-dlp and gets information on provided query, which can also be a
+// Get calls yt-dlp and gets information on provided query, which can also be a
 // playlist, which is why it returns a slice
 func Get(query string) ([]YtResult, error) {
 	// default search to "ytsearch" to keep things simple
@@ -112,17 +106,14 @@ func Get(query string) ([]YtResult, error) {
 		if err != nil {
 			return []YtResult{}, err
 		}
-
-		fmt.Println(track.Url)
 		tracks = append(tracks, track)
-
 	}
 
 	var wg sync.WaitGroup
 
 	// FIXME: if no title in output then prob given link was soundcloud playlist
 	// then we need to fetch info track by track. Maybe there is a way to fetch
-	// needed playlist info with only 1 command, but for now i haven't found how
+	// needed playlist info with only 1 command, but for now i haven't found how.
 	for i, t := range tracks {
 		track := t
 		index := i

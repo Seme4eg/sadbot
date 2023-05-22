@@ -43,7 +43,7 @@ func NewPaginator(ses *discordgo.Session, channelID string) *Paginator {
 	return p
 }
 
-// adds a handler for the given emoji name
+// Handle adds a handler for the given emoji name
 func (p *Paginator) Handle(emojiName string, handler func()) {
 	if _, ok := p.Handlers[emojiName]; !ok {
 		p.Keys = append(p.Keys, emojiName)
@@ -63,6 +63,7 @@ func (p *Paginator) Spawn(index ...int) error {
 	// Sets the footers of all added pages to their page numbers.
 	p.SetPageFooters()
 
+	// set initial index of a paginator
 	if index[0] != 0 {
 		p.Index = index[0]
 	}
@@ -80,6 +81,7 @@ func (p *Paginator) Spawn(index ...int) error {
 		p.Ses.MessageReactionAdd(p.Message.ChannelID, p.Message.ID, v)
 	}
 
+	// remove all event handlers on current paginator message delete event
 	p.cleanupOnMessageDelete()
 
 	var reaction *discordgo.MessageReaction
@@ -96,6 +98,7 @@ func (p *Paginator) Spawn(index ...int) error {
 			continue
 		}
 
+		// call handler for given emoji name if found
 		if v, ok := p.Handlers[reaction.Emoji.Name]; ok {
 			go v()
 		}
@@ -108,7 +111,7 @@ func (p *Paginator) Spawn(index ...int) error {
 	}
 }
 
-// Add a page to the paginator
+// Add adds a page to the paginator
 func (p *Paginator) Add(embeds ...*discordgo.MessageEmbed) {
 	p.Pages = append(p.Pages, embeds...)
 }
@@ -154,7 +157,8 @@ func (p *Paginator) SetPageFooters() {
 	}
 }
 
-// sends close signal to Close channel of the paginator on message delete
+// cleanupOnMessageDelete sends close signal to Close channel of the paginator
+// on message delete
 func (p *Paginator) cleanupOnMessageDelete() {
 	p.Ses.AddHandlerOnce(func(_ *discordgo.Session, e *discordgo.MessageDelete) {
 		// if current paginator message gets deleted - send true to it's close chan
@@ -164,7 +168,7 @@ func (p *Paginator) cleanupOnMessageDelete() {
 	})
 }
 
-// NextMessageReactionAddC returns a channel for the next MessageReactionAdd event
+// nextMessageReactionAddC returns a channel for the next MessageReactionAdd event
 func nextMessageReactionAddC(s *discordgo.Session) chan *discordgo.MessageReactionAdd {
 	out := make(chan *discordgo.MessageReactionAdd)
 	s.AddHandlerOnce(func(_ *discordgo.Session, e *discordgo.MessageReactionAdd) {

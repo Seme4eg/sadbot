@@ -5,6 +5,9 @@ import (
 	"strconv"
 )
 
+// Skipto checks if passed index is valid (convertable to int). If not
+// replies with correct command usage. Otherwise calls for current guild's
+// stream Skipto method outputting current song on success or error otherwise.
 func Skipto(ctx Ctx) {
 	err := RequirePresence(ctx)
 	if err != nil {
@@ -18,7 +21,7 @@ func Skipto(ctx Ctx) {
 		return
 	}
 
-	// -1 so in stream method we work with 0-based indecies
+	// -1 to make index 0-based
 	if err := ctx.Stream().Skipto(index - 1); err != nil {
 		ctx.Reply(err.Error())
 	} else {

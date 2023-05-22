@@ -2,6 +2,10 @@ package cmds
 
 import "fmt"
 
+// Repeat sets current guild's stream repeat state to either single / all or off.
+// In case of invalid argument passed replies with correct usage message.
+// On repeat 'all' event replies with the amount of songs in current repeat loop.
+// On repaet 'single' event replies with the name of the track that is on repeat.
 func Repeat(ctx Ctx) {
 	err := RequirePresence(ctx)
 	if err != nil {

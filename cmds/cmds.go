@@ -8,6 +8,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
+// Map of aliases for bot commands.
 var commands = map[string]func(Ctx){
 	"play":       Play,
 	"p":          Play,
@@ -34,7 +35,7 @@ var commands = map[string]func(Ctx){
 	"help":      Help,
 }
 
-// context for each separate message adressed to bot
+// Ctx is a context for each separate user message
 type Ctx struct {
 	S       *discordgo.Session
 	M       *discordgo.MessageCreate
@@ -43,9 +44,7 @@ type Ctx struct {
 	Prefix  string
 }
 
-// XXX: maybe i don't need to return empty one? maybe there is a way to
-// always preserve user from not having stream or smth else
-// simple stream getter for the guild in which message event happened
+// return Stream of the guild in which message event happened
 func (c *Ctx) Stream() *stream.Stream {
 	if stream, ok := c.Streams.List[c.M.GuildID]; ok {
 		return stream
@@ -55,13 +54,20 @@ func (c *Ctx) Stream() *stream.Stream {
 	return &stream.Stream{}
 }
 
+// Reply to context channel with message msg. Delete previous bot message to
+// not flood the channel.
+// NOTE: adding an option to not delete previous message will currently break
+// pagination package since the latter stops observing reaction events on
+// message delete event.
 func (c *Ctx) Reply(msg string) {
+
+	// retrieve 10 previous messages in given channel
 	messages, err := c.S.ChannelMessages(c.M.ChannelID, 10, "", "", "")
 	if err != nil {
 		fmt.Println("Error retrieving channel messages:", err)
 	}
 
-	// delete last bot message to not flood the channel
+	// delete last bot message (if found) to not flood the channel
 	// first message in slice is last in channel
 	for _, m := range messages {
 		if m.Author.ID == c.S.State.User.ID {
@@ -102,13 +108,17 @@ func Join(ctx Ctx) error {
 		return err
 	}
 
+	// create new stream and add it to pool of all streams with given guild id
 	ctx.Streams.List[ctx.M.GuildID] = stream.New(c)
 
 	return nil
 }
 
-// require presence of user and bot in the SAME channel
-// return error if this condition isn't met
+// RequirePresence requires presence of user and bot in same voice channel.
+// Requires user and bot to be in the SAME channel.
+// Also currently this f-n is not called under conditions when bot is not in
+// voice channel.
+// Returns error if this condition isn't met.
 func RequirePresence(ctx Ctx) error {
 	// Get the voice state for the given guild and user
 	VoiceState, err := ctx.S.State.VoiceState(ctx.M.GuildID, ctx.M.Author.ID)
@@ -130,6 +140,8 @@ func RequirePresence(ctx Ctx) error {
 	return nil
 }
 
+// Handle handles user commands received with Discord 'message create' event.
+// Creates new Context struct and passes it to handling function (if one found)
 func Handle(command string, s *discordgo.Session,
 	m *discordgo.MessageCreate, streams *stream.Streams, prefix string) {
 	name := strings.Fields(command)[0]

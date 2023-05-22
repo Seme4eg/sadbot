@@ -6,6 +6,10 @@ import (
 	"strings"
 )
 
+// Play joins bot to voice if it is not in one. If no arguments passed calls
+// current stream Unpause method. Otherwise processes given query, calls current
+// stream Add method for each processed track. When done replies with currnet
+// queue. Then calls for Play method.
 func Play(ctx Ctx) {
 	err := RequirePresence(ctx)
 	if err != nil {

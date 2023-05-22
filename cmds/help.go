@@ -19,6 +19,7 @@ var cmDocs = []struct{ Command, Doc string }{
 	{"np", "~~No problem~~ Show current track name."},
 }
 
+// Help replies with formatted help message to the user
 func Help(ctx Ctx) {
 	var msg string
 	for _, v := range cmDocs {

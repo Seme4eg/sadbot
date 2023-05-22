@@ -2,6 +2,7 @@ package cmds
 
 import "fmt"
 
+// Unshuffle calls current guild's Unshuffle method.
 func Unshuffle(ctx Ctx) {
 	err := RequirePresence(ctx)
 	if err != nil {

@@ -20,36 +20,42 @@ const (
 	RepeatAll    RepeatState = "all"
 )
 
+// needed to wrap the 'List' it in struct to not lose it's pointer when passing
+// it around cuz then can't delete inactive streams
 type Streams struct {
-	// keys are guildid since it seems reasonable to store 1 stream per guild
+	// keys are guild ids since it seems reasonable to store 1 stream per guild
 	List map[string]*Stream
 }
 
-// didn't go for interface here cuz it seemed redundant
-// 1 stream per 1 session, holds info about voice connection state, and other
-// 'player' stuff like queue etc
+// Stream holds 1 stream per 1 guild, holds info about voice connection state,
+// and other 'player' stuff like queue etc
 type Stream struct {
 	// NOTE: when adding new field don't forget to reset it on events like
 	// leave, stop and clear
 	sync.Mutex
 	V *discordgo.VoiceConnection
 
-	Queue     []Song
+	Queue []Song
+	// index of currently playing song in queue (not song initial index that
+	// presents in Song struct)
 	SongIndex int
 
 	Playing bool
 	Repeat  RepeatState
 
+	// Channel which when being sent to stops current ffmpeg playback
 	Stop chan bool
 }
 
 type Song struct {
-	Title  string
+	Title string
+	// source can be either Url or a path (if using playfolder command)
 	Source string
 	Index  int // initial index, used to 'unshuffle' suffled queue
 	// TODO: Duration string
 }
 
+// New returns new stream struct
 func New(vc *discordgo.VoiceConnection) *Stream {
 	return &Stream{
 		V:      vc,
@@ -58,13 +64,15 @@ func New(vc *discordgo.VoiceConnection) *Stream {
 	}
 }
 
+// Play starts playback of song with current SongIndex and attempts to skip
+// to next song in queue on current song end or on send event to Stop channel.
 func (s *Stream) Play() error {
 	s.Playing = true
 
 	for len(s.Queue) > 0 && s.SongIndex >= 0 && s.SongIndex < len(s.Queue) && s.Playing {
 
 		done := make(chan bool)
-		// defer close(done)
+		// start playback function in background
 		go func() {
 			err := utils.PlayAudioFile(s.V, s.Queue[s.SongIndex].Source, s.Stop, &s.Playing)
 			if err != nil {
@@ -85,10 +93,11 @@ func (s *Stream) Play() error {
 				}
 			}
 		case <-s.Stop:
-			s.Stop <- true // also stop current ffmpeg process
+			// this case can happen only on user iteration, means we do not need
+			// to respect current Repeat state
+			s.Stop <- true // stop current ffmpeg process
 			// prevent ffmpeg processes from overlapping (especially on prev command)
 			time.Sleep(time.Millisecond * 350)
-			// otherwise do nothing cuz it means user is skipping / preving
 			continue
 		}
 	}
@@ -98,12 +107,8 @@ func (s *Stream) Play() error {
 	return nil
 }
 
-// Resets all fields of current (and only one) Stream struct except
-// field 'S *discordgo.Session' and Stop channel
-// and stops possibly remaining ffmpeg process
-// withoutVoiceChan flag is passed for now only when using Stop command
-// since it needs to reset Stream in the same way except Voice Channel
-// cuz it's still in one
+// Reset resets fields of current Stream except session and stop channel.
+// Stops possibly remaining ffmpeg process.
 func (s *Stream) Reset() {
 	s.Lock()
 	defer s.Unlock()
@@ -118,6 +123,7 @@ func (s *Stream) Reset() {
 	}
 }
 
+// Clear empties queue and resets current song index to 0.
 func (s *Stream) Clear() {
 	s.Lock()
 	defer s.Unlock()
@@ -125,7 +131,8 @@ func (s *Stream) Clear() {
 	s.SongIndex = 0
 }
 
-// randomise queue except 1st song
+// Shuffle shuffles queue. Currently playing song will be 1st always in shuffled
+// queue.
 func (s *Stream) Shuffle() {
 	s.Lock()
 	defer s.Unlock()
@@ -141,7 +148,7 @@ func (s *Stream) Shuffle() {
 	fmt.Println(len(s.Queue), "len")
 }
 
-// sorts queue based on songs initial index
+// Unshuffle sorts songs in queue by their initial index field.
 func (s *Stream) UnShuffle() {
 	s.Lock()
 	defer s.Unlock()
@@ -162,7 +169,8 @@ func (s *Stream) UnShuffle() {
 	}
 }
 
-// sets stream repeat state and returns response string
+// SetRepeat sets current guild's stream repeat state to either
+// single / all or off.
 func (s *Stream) SetRepeat(state string) error {
 	s.Lock()
 	defer s.Unlock()
@@ -175,11 +183,15 @@ func (s *Stream) SetRepeat(state string) error {
 	return nil
 }
 
-// kills current playback, skips to next track
+// Next skips to next song unconditionally. Means even if user has set repeat
+// state to 'single' it will still skip to next song. Kills current playback by
+// sending to Stop channel.
 func (s *Stream) Next() error {
 	s.Lock()
 	defer s.Unlock()
 
+	// FIXME: somewhere here an error occurs and bot remains unoperational after
+	// queue has finished.
 	s.SongIndex++
 
 	if s.SongIndex >= len(s.Queue) {
@@ -196,7 +208,9 @@ func (s *Stream) Next() error {
 	return nil
 }
 
-// kills current playback, skips to previous track
+// Prev skips to previous song unconditionally. Means even if user has set
+// repeat state to 'single' it will still skip to previous song. Kills current
+// playback by sending to Stop channel.
 func (s *Stream) Prev() error {
 	s.Lock()
 	defer s.Unlock()
@@ -217,6 +231,7 @@ func (s *Stream) Prev() error {
 	return nil
 }
 
+// Current returns title of song with current SongIndex.
 func (s *Stream) Current() string {
 	if len(s.Queue) == 0 {
 		return ""
@@ -224,13 +239,15 @@ func (s *Stream) Current() string {
 	return s.Queue[s.SongIndex].Title
 }
 
-// TODO: add easyer support for more fields
+// Add appends new song with given Source and Title to queue.
+// REVIEW: how to add easier support for more fields
 func (s *Stream) Add(Source, Title string) {
 	s.Lock()
 	defer s.Unlock()
 	s.Queue = append(s.Queue, Song{Title, Source, len(s.Queue)})
 }
 
+// Skipto skips to song with given index.
 func (s *Stream) Skipto(index int) error {
 	if index <= 0 || index > len(s.Queue) {
 		return errors.New("no song with such index")
@@ -245,11 +262,20 @@ func (s *Stream) Skipto(index int) error {
 	return nil
 }
 
+// Disconnect resets stream and calls Disconnect method of current voice channel.
 func (s *Stream) Disconnect() error {
 	s.Reset()
 	return s.V.Disconnect()
 }
 
+// Pause sets Playing state to false effectively pausing current ffmpeg process
+// since the latter observes this flag.
 func (s *Stream) Pause() {
 	s.Playing = false
+}
+
+// Unpause sets playing flag to true effectively unpausing current ffmpeg
+// process since the latter observes this flag.
+func (s *Stream) Unpause() {
+	s.Playing = true
 }

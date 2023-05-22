@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"github.com/seme4eg/sadbot/cmds"
 	"github.com/seme4eg/sadbot/stream"
 	"github.com/seme4eg/sadbot/utils"
@@ -15,23 +14,24 @@ import (
 )
 
 var (
-	config  *utils.Config
-	session *discordgo.Session
+	config *utils.Config
+	// map of all streams that contains one stream per one guild
 	Streams *stream.Streams
 )
 
 func init() {
 	var err error
 	if config, err = utils.NewConfig(); err != nil {
-		log.Fatal("Failed parse config file", err)
+		fmt.Println("Failed to parse config file", err)
+		os.Exit(1)
 	}
 }
 
 func main() {
-	var err error
 	// Create new Discord Session
-	if session, err = discordgo.New("Bot " + config.Token); err != nil {
-		fmt.Println(err)
+	session, err := discordgo.New("Bot " + config.Token)
+	if err != nil {
+		fmt.Println("Failed to create a discord session:", err)
 		return
 	}
 
@@ -48,24 +48,21 @@ func main() {
 	// ensure that session will be gracefully closed whenever the function exits
 	defer session.Close()
 
-	fmt.Println("Bot is running!")
-
 	// run until code is terminated
-	fmt.Println("sadbot is now running. Press CTRL-C to exit.")
+	fmt.Println("sadbot is now running. Press Ctrl-C to exit.")
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-c
 }
 
-// This function will be called when the bot receives
-// the "ready" event from Discord.
+// Handler for the "ready" event from Discord
 func ready(s *discordgo.Session, event *discordgo.Ready) {
-	// Set the playing status.
 	s.UpdateListeningStatus(config.Prefix + "help")
 }
 
+// Handler for "message create" event from Discord
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
-	// ignore bot messages and all messages without needed prefix
+	// ignore bot messages and all messages without bot prefix
 	if m.Author.ID == s.State.User.ID || !strings.HasPrefix(m.Content, config.Prefix) {
 		return
 	}

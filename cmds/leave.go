@@ -2,6 +2,8 @@ package cmds
 
 import "fmt"
 
+// Leave disconnects bot from current voice channel (in current guild) and
+// removes guild's Stream from the pool of all streams.
 func Leave(ctx Ctx) {
 	err := RequirePresence(ctx)
 	if err != nil {
