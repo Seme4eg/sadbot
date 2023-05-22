@@ -39,8 +39,9 @@ func main() {
 
 	session.AddHandler(ready)         // ready events.
 	session.AddHandler(messageCreate) // messageCreate events.
-	// session.AddHandler(guildCreate) guildCreate events.
+	session.AddHandler(guildCreate)   // guildCreate events.
 
+	// create websocket connection with discord
 	if err := session.Open(); err != nil {
 		fmt.Println(err)
 		return
@@ -76,18 +77,19 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	cmds.Handle(command, s, m, Streams, config.Prefix)
 }
 
-// This function will be called every time a new guild is joined.
+// This function will be called every time a new guild is joined
 func guildCreate(s *discordgo.Session, event *discordgo.GuildCreate) {
 	if event.Unavailable {
 		return
 	}
 	for _, channel := range event.Channels {
 		if channel.ID == event.ID {
-			_, _ = s.ChannelMessageSend(
+			_, err := s.ChannelMessageSend(
 				channel.ID,
-				fmt.Sprintf(
-					"sadbot is ready! Type %shelp to see what it's capable of.",
-					config.Prefix))
+				fmt.Sprintf("sadbot is ready! You need %shelp.", config.Prefix))
+			if err != nil {
+				fmt.Println("Failed to greet the guild:", err)
+			}
 			return
 		}
 	}
