@@ -1,41 +1,76 @@
-#+title: sadbot documentation
+#+title: sad discord music bot
 
-- [[https://discord.com/developers/applications][discord applications page]]
-- [[https://discord.com/api/oauth2/authorize?client_id=1104687184537190441&permissions=274881440832&scope=bot][bot invite link]]
+** Usage
+Create a ~config.yml~, set your bot token there.
 
-** Deps
-- yt-dlp (maybe replace with some [[https://github.com/iawia002/lux][go-based]] [[https://pkg.go.dev/search?q=youtube-dl&m=package][analogue]](s)?)
-- cgo-git (AUR), *todo*: find opus driver without other deps?
+All commands below should be prefixed with prefix that is set in =config.yml=
+(default ~&~).
 
-Optional dependencies for yt-dlp
-    ffmpeg: for video post-processing [installed]
-    rtmpdump: for rtmp streams support
-    atomicparsley: for embedding thumbnails into m4a files
-    aria2: for using aria2 as external downloader
-    python-mutagen: For embedding thumbnail in certain formats [installed]
-    python-pycryptodomex: For decrypting AES-128 HLS streams and various other data
-    python-websockets: For downloading over websocket
+# this section should copy 'help.go' file
+- ~help~ - Show help message.
+- ~p | play [<Title | URL>]~ - Resume paused playback. If <title | url> argument
+  was given plays links from youtube & soundcloud.
+- ~pf | playfolder <path>~ - Play music from local folder (bot hoster only).
+- ~pause~ - Pause current playback.
+- ~stop~ - Stop current playback, clears queue.
+- ~next | skip~ - Skip to next song assuming there is one.
+- ~skipto <index>~ - Skip to song with <index> (look it up in queue) assuming
+  there is one.
+- ~clear~ - Clear current queue.
+- ~leave~ - Leave the channel, clears queue, resets shuffle & repeat states.
+- ~repeat single/all/off~ - Repeat current track. Repeat all queue. Disable
+  repeat.
+- ~loop~ - Same as _repeat all_.
+- ~(un)shuffle~ - (un)Shuffle the queue.
+- ~q | queue~ - Show current queue.
+- ~np~ - Show current track name.
+
+** Dependencies
+- *ffmpeg*
+- *yt-dlp*
+- *cgo*
+
+/Note/: as a downloader in yt-dlp i am using ffmpeg, another option is to use
+aria2 but my aim was to keep this project minimal in terms of dependencies.
 
 ** Todos
-#+begin_src go
-// logs errors to STDERR
-var ErrLog = func(str string, err error) {
-	prefix := "audio module: " + str
-	if err != nil {
-		os.Stderr.WriteString(prefix + ": " + err.Error())
-	} else {
-		os.Stderr.WriteString(prefix)
-	}
-}
-#+end_src
-
-- update queue command based on what i did
-- [[https://github.com/yt-dlp/yt-dlp#usage-and-options][yt-dlp]]
-- [[https://github.com/bwmarrin/discordgo/wiki/Awesome-DiscordGo][references]]
 - Reply f-n now deletes prev message always, even if it's from prev session,
-  which isn't a big deal, but is an unobvious behavious, subject for fix
+  which isn't a big deal, but is an unobvious behaviour, subject for fix
 - maybe add some more options to config? like how many tracks to show in queue?
 - teach bot to leave after x time when no1 in voice
-- session sharding
-- fix ~SendPCM error: Audio module error: PCM Channel closed~ log after each track
-- make custom error interface for each package?
+- [[https://pkg.go.dev/github.com/bwmarrin/discordgo@v0.27.1#Session][sharding]] and ~shards~ command to display info on shards status
+- duration output in queue
+- cleanup on interrupt, many goroutines report error from audio package
+- after interrupting (or queue end):
+  - error nexting: either last song in the queue or no songs in it
+  - Error streaming: either last song in the queue or no songs in it
+- _commands_:
+  - ~ping~ command to show actual ping
+  - ~stats~ command
+  - ~radio~ Endless auto-generated radio based on selected genre.
+
+#+begin_comment
+Error playing audio file:  read |0: file already closed
+Error killing ffmpeg process: os: process already finished
+Error playing audio file:  read |0: file already closed
+Error killing ffmpeg process: os: process already finished
+Error playing audio file:  read |0: file already closed
+error nexting: either last song in the queue or no songs in it
+Error streaming: either last song in the queue or no songs in it
+panic: runtime error: index out of range [1] with length 1
+
+goroutine 966 [running]:
+sadbot/paginator.(*Paginator).Spawn(0xc0002b6200, {0xc000074bc8, 0x1, 0x12?})
+        /home/earthian/git/sadbot/paginator/paginator.go:69 +0x38a
+sadbot/cmds.Queue({0xc0000bea80, 0xc000014120, {0xc000028359, 0x5}, 0xc0000140e0, {0xa45b50, 0x1}})
+        /home/earthian/git/sadbot/cmds/queue.go:60 +0x4c8
+sadbot/cmds.Handle({0xc000028359, 0x5}, 0xc0000bea80, 0xc000014120, 0xc0000140e0, {0xa45b50, 0x1})
+        /home/earthian/git/sadbot/cmds/cmds.go:143 +0x1fc
+main.messageCreate(0xc0000bea80, 0xc000014120)
+        /home/earthian/git/sadbot/main.go:79 +0x15e
+github.com/bwmarrin/discordgo.messageCreateEventHandler.Handle(0xc0003b82c0?, 0xc0000fc000?, {0x79b140?, 0xc000014120?})
+        /home/earthian/go/pkg/mod/github.com/bwmarrin/discordgo@v0.27.1/eventhandlers.go:753 +0x38
+created by github.com/bwmarrin/discordgo.(*Session).handle
+        /home/earthian/go/pkg/mod/github.com/bwmarrin/discordgo@v0.27.1/event.go:171 +0x16a
+exit status 2
+#+end_comment
