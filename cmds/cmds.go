@@ -124,12 +124,18 @@ func RequirePresence(ctx Ctx) error {
 		return err
 	}
 
-	if ctx.Stream().V != nil {
-		// forbid user to command 'leave' if in different channel than the bot
-		if ctx.Stream().V.ChannelID != VoiceState.ChannelID {
-			ctx.Reply("Must be in same voice channel as bot")
-			return fmt.Errorf("user is in different channel than bot")
-		}
+	// if bot is not connected to a voice channel in current guild..
+	if ctx.Stream().V == nil {
+		ctx.Reply(fmt.Sprintf(
+			"Bot is not connected to a voice channel. Use **%splay <Title | URL>**",
+			ctx.Prefix))
+		return fmt.Errorf("bot is not connected to voice channel")
+	}
+
+	// forbid user to command bot if in different channel than the bot
+	if ctx.Stream().V.ChannelID != VoiceState.ChannelID {
+		ctx.Reply("Must be in same voice channel as bot")
+		return fmt.Errorf("user is in different channel than bot")
 	}
 
 	return nil
