@@ -111,9 +111,7 @@ func Join(ctx Ctx) error {
 
 // RequirePresence requires presence of user and bot in same voice channel.
 // Requires user and bot to be in the SAME channel.
-// Also currently this f-n is not called under conditions when bot is not in
-// voice channel.
-// Returns error if this condition isn't met.
+// Returns error if any condition isn't met.
 func RequirePresence(ctx Ctx) error {
 	// Get the voice state for the given guild and user
 	VoiceState, err := ctx.S.State.VoiceState(ctx.M.GuildID, ctx.M.Author.ID)

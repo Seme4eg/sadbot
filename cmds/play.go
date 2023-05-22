@@ -11,9 +11,12 @@ import (
 // stream Add method for each processed track. When done replies with currnet
 // queue. Then calls for Play method.
 func Play(ctx Ctx) {
-	err := RequirePresence(ctx)
+	// Get the voice state for the given guild and user
+	_, err := ctx.S.State.VoiceState(ctx.M.GuildID, ctx.M.Author.ID)
+
+	// if err means user is not connected to a voice channel
 	if err != nil {
-		fmt.Println(err)
+		ctx.Reply("Must be connected to voice channel to use bot")
 		return
 	}
 

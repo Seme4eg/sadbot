@@ -13,9 +13,12 @@ var formats = []string{"mp3", "flac", "wav", "opus"}
 // When done replies with currnet queue. Then calls for Play method.
 // (doesn't support standalones for now)
 func PlayFolder(ctx Ctx) {
-	err := RequirePresence(ctx)
+	// Get the voice state for the given guild and user
+	_, err := ctx.S.State.VoiceState(ctx.M.GuildID, ctx.M.Author.ID)
+
+	// if err means user is not connected to a voice channel
 	if err != nil {
-		fmt.Println(err)
+		ctx.Reply("Must be connected to voice channel to use bot")
 		return
 	}
 
