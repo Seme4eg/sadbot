@@ -9,9 +9,6 @@ import (
 )
 
 var commands = map[string]func(Ctx){
-	"ping": func(ctx Ctx) {
-		_, _ = ctx.S.ChannelMessageSend(ctx.M.ChannelID, "pong")
-	},
 	"play":       Play,
 	"p":          Play,
 	"playfolder": PlayFolder,

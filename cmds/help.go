@@ -4,7 +4,6 @@ import "fmt"
 
 var cmDocs = []struct{ Command, Doc string }{
 	{"help", "Show this help message."},
-	{"Ping", "Ping the bot, checking if it's up and running."},
 	{"p | play [<Title | URL>]", "Resume paused playback. If <title | url> argument was given plays links from youtube & soundcloud."},
 	{"pf | playfolder <path>", "Play music from local folder (bot hoster only)."},
 	{"pause", "Pause current playback."},
