@@ -1,4 +1,4 @@
-package cmds
+package cmd
 
 // NowPlaying replies with currently playing song name if there is one.
 func NowPlaying(ctx Ctx) {

@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/seme4eg/sadbot/cmds"
+	"github.com/seme4eg/sadbot/cmd"
 	"github.com/seme4eg/sadbot/stream"
 	"github.com/seme4eg/sadbot/utils"
 	"os"
@@ -74,7 +74,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	cmds.Handle(command, s, m, Streams, config.Prefix)
+	cmd.Handle(command, s, m, Streams, config.Prefix)
 }
 
 // This function will be called every time a new guild is joined
