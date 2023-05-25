@@ -1,6 +1,13 @@
 #+title: sad discord music bot
 
+Discord bot that utilizes discordgo, gopus, yt-dlp and ffmpeg to stream music
+from host machine, YouTube, SoundCloud and other streaming platforms to user's
+voice channel.
+
 [[assets/queue.png]]
+
+Right now my network capabilities are far below what's needed to host this bot
+myself.
 
 ** Usage
 Create a ~config.yml~, set your bot token there.
@@ -46,6 +53,8 @@ aria2 but my aim was to keep this project minimal in terms of dependencies.
 - after interrupting (or queue end):
   - error nexting: either last song in the queue or no songs in it
   - Error streaming: either last song in the queue or no songs in it
+- should each song has it's own 'playback' process in its struct? will it be
+  easier to manage playback then?
 - _commands_:
   - ~ping~ command to show actual ping
   - ~stats~ command
