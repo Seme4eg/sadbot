@@ -19,15 +19,15 @@ var (
 	Streams *stream.Streams
 )
 
-func init() {
+func main() {
+
+	// parse config file
 	var err error
 	if config, err = utils.NewConfig(); err != nil {
 		fmt.Println("Failed to parse config file", err)
 		os.Exit(1)
 	}
-}
 
-func main() {
 	// Create new Discord Session
 	session, err := discordgo.New("Bot " + config.Token)
 	if err != nil {
