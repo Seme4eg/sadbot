@@ -4,11 +4,11 @@ import "fmt"
 
 // Clear calls current guild's stream Clear method.
 func Clear(ctx Ctx) {
-	err := RequirePresence(ctx)
+	err := requirePresence(ctx)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	ctx.Stream().Clear()
-	ctx.Reply("Queue cleared")
+	ctx.stream().Clear()
+	ctx.reply("Queue cleared")
 }

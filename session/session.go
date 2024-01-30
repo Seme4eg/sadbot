@@ -25,9 +25,9 @@ func new(token, prefix string) (*Session, error) {
 }
 
 func (s *Session) addHandlers() {
-	s.Session.AddHandler(s.ready())         // ready events.
-	s.Session.AddHandler(s.messageCreate()) // messageCreate events.
-	s.Session.AddHandler(s.guildCreate())   // guildCreate events.
+	s.Session.AddHandler(s.ready)         // ready events.
+	s.Session.AddHandler(s.messageCreate) // messageCreate events.
+	s.Session.AddHandler(s.guildCreate)   // guildCreate events.
 }
 
 // create websocket connection with discord

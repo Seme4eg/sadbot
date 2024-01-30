@@ -4,10 +4,10 @@ import "fmt"
 
 // Pause calls current guild's stream Pause method.
 func Pause(ctx Ctx) {
-	err := RequirePresence(ctx)
+	err := requirePresence(ctx)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	ctx.Stream().Pause()
+	ctx.stream().Pause()
 }

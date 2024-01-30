@@ -16,13 +16,13 @@ func Play(ctx Ctx) {
 
 	// if err means user is not connected to a voice channel
 	if err != nil {
-		ctx.Reply("Must be connected to voice channel to use bot")
+		ctx.reply("Must be connected to voice channel to use bot")
 		return
 	}
 
 	// join voice in case bot is not in one
-	if ctx.Stream().V == nil {
-		err := Join(ctx)
+	if ctx.stream().V == nil {
+		err := join(ctx)
 		if err != nil {
 			fmt.Println("Failed to join voice channel:", err)
 			return
@@ -32,22 +32,22 @@ func Play(ctx Ctx) {
 	args := strings.TrimSpace(ctx.Args)
 
 	if args == "" {
-		ctx.Stream().Unpause()
+		ctx.stream().Unpause()
 		return
 	}
 
 	res, err := utils.ProcessQuery(args)
 	if err != nil {
-		ctx.Reply(err.Error())
+		ctx.reply(err.Error())
 	}
 
 	for _, t := range res {
-		ctx.Stream().Add(t.Url, t.Title)
+		ctx.stream().Add(t.Url, t.Title)
 	}
 
 	go Queue(ctx)
 
-	if err := ctx.Stream().Play(); err != nil {
+	if err := ctx.stream().Play(); err != nil {
 		fmt.Println("Error streaming:", err)
 	}
 }

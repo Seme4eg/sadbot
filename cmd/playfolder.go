@@ -18,13 +18,13 @@ func PlayFolder(ctx Ctx) {
 
 	// if err means user is not connected to a voice channel
 	if err != nil {
-		ctx.Reply("Must be connected to voice channel to use bot")
+		ctx.reply("Must be connected to voice channel to use bot")
 		return
 	}
 
 	// join voice in case bot is not in one
-	if ctx.Stream().V == nil {
-		err := Join(ctx)
+	if ctx.stream().V == nil {
+		err := join(ctx)
 		if err != nil {
 			fmt.Println("Failed to join voice channel:", err)
 			return
@@ -32,7 +32,7 @@ func PlayFolder(ctx Ctx) {
 	}
 
 	if strings.TrimSpace(ctx.Args) == "" {
-		ctx.Reply("provide a folder pls, sir")
+		ctx.reply("provide a folder pls, sir")
 		return
 	}
 
@@ -52,12 +52,12 @@ func PlayFolder(ctx Ctx) {
 	// add tracks to queue
 	for _, path := range trackPaths {
 		title := strings.TrimPrefix(path, ctx.Args+"/")
-		ctx.Stream().Add(path, title)
+		ctx.stream().Add(path, title)
 	}
 
 	go Queue(ctx)
 
-	if err := ctx.Stream().Play(); err != nil {
+	if err := ctx.stream().Play(); err != nil {
 		fmt.Println("Error streaming:", err)
 		return
 	}

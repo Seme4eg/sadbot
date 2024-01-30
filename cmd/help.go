@@ -29,5 +29,5 @@ func Help(ctx Ctx) {
 	// add footer note
 	msg += "\nBot invite link:\n" + "https://discord.com/api/oauth2/authorize?client_id=1104687184537190441&permissions=274881440832&scope=bot"
 
-	ctx.Reply(msg)
+	ctx.reply(msg)
 }

@@ -11,20 +11,17 @@ import (
 	"github.com/seme4eg/sadbot/utils"
 )
 
-var config *utils.Config
-
 func main() {
 	// parse config file
-	var err error
-	if config, err = utils.NewConfig(); err != nil {
+	config, err := utils.GetConfig()
+	if err != nil {
 		log.Fatalf("Failed to parse config file: %s", err)
 	}
 
 	// Create new Discord Session
 	session, err := session.OpenSession("Bot "+config.Token, config.Prefix)
 	if err != nil {
-		fmt.Println("Failed to create a discord session:", err)
-		return
+		log.Fatalf("Failed to create a discord session: %s", err)
 	}
 
 	// ensure that session will be gracefully closed whenever the function exits

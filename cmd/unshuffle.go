@@ -4,11 +4,11 @@ import "fmt"
 
 // Unshuffle calls current guild's Unshuffle method.
 func Unshuffle(ctx Ctx) {
-	err := RequirePresence(ctx)
+	err := requirePresence(ctx)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	ctx.Stream().UnShuffle()
-	ctx.Reply("Shuffling turned off.")
+	ctx.stream().UnShuffle()
+	ctx.reply("Shuffling turned off.")
 }
