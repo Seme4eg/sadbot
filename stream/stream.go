@@ -32,8 +32,8 @@ type Streams struct {
 type Stream struct {
 	// NOTE: when adding new field don't forget to reset it on events like
 	// leave, stop and clear
-	sync.Mutex
-	V *discordgo.VoiceConnection
+	mu sync.Mutex // don't expose Lock and Unlock
+	V  *discordgo.VoiceConnection
 
 	Queue []Song
 	// index of currently playing song in queue (not song initial index that
@@ -110,8 +110,8 @@ func (s *Stream) Play() error {
 // Reset resets fields of current Stream except session and stop channel.
 // Stops possibly remaining ffmpeg process.
 func (s *Stream) Reset() {
-	s.Lock()
-	defer s.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.Playing = false
 	s.Queue = s.Queue[:0]
 	s.SongIndex = 0
@@ -125,8 +125,8 @@ func (s *Stream) Reset() {
 
 // Clear empties queue and resets current song index to 0.
 func (s *Stream) Clear() {
-	s.Lock()
-	defer s.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.Queue = s.Queue[:0]
 	s.SongIndex = 0
 }
@@ -134,8 +134,8 @@ func (s *Stream) Clear() {
 // Shuffle shuffles queue. Currently playing song will be 1st always in shuffled
 // queue.
 func (s *Stream) Shuffle() {
-	s.Lock()
-	defer s.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	currentSong := s.Queue[s.SongIndex]
 	// create temporary 'queue' value that doesn't contain currently playing
 	// track since after each shuffle we want it to be still first in queue
@@ -150,8 +150,8 @@ func (s *Stream) Shuffle() {
 
 // Unshuffle sorts songs in queue by their initial index field.
 func (s *Stream) UnShuffle() {
-	s.Lock()
-	defer s.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	// get index of currently playing song
 	curIndex := s.Queue[s.SongIndex].Index
 
@@ -172,8 +172,8 @@ func (s *Stream) UnShuffle() {
 // SetRepeat sets current guild's stream repeat state to either
 // single / all or off.
 func (s *Stream) SetRepeat(state string) error {
-	s.Lock()
-	defer s.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	switch val := RepeatState(state); val {
 	case RepeatSingle, RepeatAll, RepeatOff:
 		s.Repeat = val
@@ -187,8 +187,8 @@ func (s *Stream) SetRepeat(state string) error {
 // state to 'single' it will still skip to next song. Kills current playback by
 // sending to Stop channel.
 func (s *Stream) Next() error {
-	s.Lock()
-	defer s.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	// FIXME: somewhere here an error occurs and bot remains unoperational after
 	// queue has finished.
@@ -212,8 +212,8 @@ func (s *Stream) Next() error {
 // repeat state to 'single' it will still skip to previous song. Kills current
 // playback by sending to Stop channel.
 func (s *Stream) Prev() error {
-	s.Lock()
-	defer s.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	s.SongIndex--
 
@@ -242,8 +242,8 @@ func (s *Stream) Current() string {
 // Add appends new song with given Source and Title to queue.
 // REVIEW: how to add easier support for more fields
 func (s *Stream) Add(Source, Title string) {
-	s.Lock()
-	defer s.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.Queue = append(s.Queue, Song{Title, Source, len(s.Queue)})
 }
 
@@ -253,11 +253,11 @@ func (s *Stream) Skipto(index int) error {
 		return errors.New("no song with such index")
 	}
 
-	s.Lock()
+	s.mu.Lock()
 
 	s.SongIndex = index
 
-	s.Unlock()
+	s.mu.Unlock()
 	s.Stop <- true
 	return nil
 }

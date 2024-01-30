@@ -10,7 +10,7 @@ import (
 
 // Paginator provides a method for creating a navigatable embed
 type Paginator struct {
-	sync.Mutex
+	mu        sync.Mutex // dont expose mutex methods
 	Ses       *discordgo.Session
 	ChannelID string
 	Close     chan bool
@@ -118,8 +118,8 @@ func (p *Paginator) Add(embeds ...*discordgo.MessageEmbed) {
 
 // Goto jumps to the requested page index
 func (p *Paginator) Goto(index int) {
-	p.Lock()
-	defer p.Unlock()
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	l := len(p.Pages)
 
 	if index < 0 || index >= l {
