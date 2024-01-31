@@ -4,7 +4,7 @@ import "fmt"
 
 // Repeat sets current guild's stream repeat state to either single / all or off.
 // In case of invalid argument passed replies with correct usage message.
-// On repeat 'all' event replies with the amount of songs in current repeat loop.
+// On repeat 'all' event replies with the amount of tracks in current repeat loop.
 // On repaet 'single' event replies with the name of the track that is on repeat.
 func Repeat(ctx Ctx) {
 	err := requirePresence(ctx)
@@ -24,7 +24,7 @@ func Repeat(ctx Ctx) {
 		ctx.reply(fmt.Sprintf("Now repeating: **%s**", ctx.stream().Current()))
 	case "all":
 		ctx.reply(
-			fmt.Sprintf("Now repeating **%s** songs", fmt.Sprint(len(ctx.stream().Queue))))
+			fmt.Sprintf("Now repeating **%s** tracks", fmt.Sprint(len(ctx.stream().Queue))))
 	case "off":
 		ctx.reply("Repeat turned off")
 	}

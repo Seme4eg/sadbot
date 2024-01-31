@@ -3,10 +3,11 @@
 // pause support and obfuscated this file a bit. All changes can be seen in this
 // file git history.
 
-package utils
+package track
 
 import (
 	"bufio"
+	"context"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -16,6 +17,7 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/seme4eg/sadbot/utils"
 	"layeh.com/gopus"
 )
 
@@ -34,9 +36,9 @@ var (
 	ErrPcmClosed = errors.New("err: PCM Channel closed")
 )
 
-// SendPCM receives on the provied channel
+// sendPCM receives on the provied channel
 // encodes received PCM data into Opus and sends that to Discordgo
-func SendPCM(v *discordgo.VoiceConnection, pcm <-chan []int16) error {
+func sendPCM(v *discordgo.VoiceConnection, pcm <-chan []int16) error {
 	opusEncoder, err := gopus.NewEncoder(frameRate, channels, gopus.Audio)
 	if err != nil {
 		return err
@@ -65,49 +67,15 @@ func SendPCM(v *discordgo.VoiceConnection, pcm <-chan []int16) error {
 	}
 }
 
-// PlayAudioFile will play the given filename to the already connected
-// Discord voice server/channel. voice websocket and udp socket
-// must already be setup before this will work.
+// playAudioFile plays the given filename to the already connected Discord voice
+// server/channel. Voice websocket and udp socket must already be setup before
+// this will work.
 // FIXME: split this huge function
-func PlayAudioFile(v *discordgo.VoiceConnection, source string, stop <-chan bool, playing *bool) error {
-	var (
-		ytdlp    *exec.Cmd
-		ytdlpOut io.ReadCloser
-		err      error
-	)
+func playAudioFile(ctx context.Context, track *Track, v *discordgo.VoiceConnection) (err error) {
 
-	isUrl := IsUrl(source)
-
-	if isUrl {
-		ytdlp = exec.Command("yt-dlp", "--no-part", "--downloader", "ffmpeg",
-			"--buffer-size", "16K", "--limit-rate", "50K", "-o", "-", "-f", "bestaudio", source)
-		// since ytdlp is now source of ffmpeg command we need to change source
-		// to "-" so ffmpeg reads from pipe
-		source = "-"
-		ytdlpOut, err = ytdlp.StdoutPipe()
-		if err != nil {
-			return err
-		}
-		if err := ytdlp.Start(); err != nil {
-			return err
-		}
-
-		// FIXME: still sometimes skips to next song before current finished playing
-		// Prevent yt-dlp command to finish before ffmpeg is done reading its output
-		go func() {
-			if err := ytdlp.Wait(); err != nil {
-				fmt.Println("error waiting for ytdlp to finish:", err)
-			}
-		}()
-
-		defer ytdlp.Process.Kill()
-	}
-
-	ffmpeg := exec.Command("ffmpeg", "-i", source, "-f", "s16le", "-ar",
-		strconv.Itoa(frameRate), "-ac", strconv.Itoa(channels), "pipe:1")
-
-	if isUrl {
-		ffmpeg.Stdin = ytdlpOut
+	ffmpeg, err := createFfmpegProcess(track.source)
+	if err != nil {
+		return fmt.Errorf("error starting ffmpeg process: %s", err)
 	}
 
 	ffmpegout, err := ffmpeg.StdoutPipe()
@@ -123,42 +91,16 @@ func PlayAudioFile(v *discordgo.VoiceConnection, source string, stop <-chan bool
 	}
 
 	// prevent memory leak from residual ffmpeg streams
+	// NOTE: not handling errors since the only errors that can appear here is
+	// that the process no longer exists
 	defer ffmpeg.Process.Kill()
-
-	// when stop is sent, kill ffmpeg
-	go func() {
-		<-stop
-		err = ffmpeg.Process.Kill()
-		if err != nil {
-			fmt.Println("Error killing ffmpeg process:", err)
-		}
-		if isUrl {
-			err = ytdlp.Process.Kill()
-			if err != nil {
-				fmt.Println("Error killing ytdlp process:", err)
-			}
-		}
-	}()
-
-	// Send "speaking" packet over the voice websocket
-	if err = v.Speaking(true); err != nil {
-		return err
-	}
-
-	// Send not "speaking" packet over the websocket when we finish
-	defer func() {
-		err := v.Speaking(false)
-		if err != nil {
-			fmt.Println("Couldn't stop speaking:", err)
-		}
-	}()
 
 	send := make(chan []int16, 2)
 	defer close(send)
 
 	close := make(chan bool)
 	go func() {
-		err := SendPCM(v, send)
+		err := sendPCM(v, send)
 		if err != nil {
 			// ignore pcm closed error since it appears on every process end
 			if !errors.Is(err, ErrPcmClosed) {
@@ -170,7 +112,7 @@ func PlayAudioFile(v *discordgo.VoiceConnection, source string, stop <-chan bool
 
 	for {
 		// means player was paused by the user, check every second on status change
-		if !*playing {
+		if !track.playing {
 			time.Sleep(1 * time.Second)
 			continue
 		}
@@ -191,4 +133,48 @@ func PlayAudioFile(v *discordgo.VoiceConnection, source string, stop <-chan bool
 			return nil
 		}
 	}
+}
+
+func createFfmpegProcess(source string) (ffmpeg *exec.Cmd, err error) {
+	var (
+		ytdlp    *exec.Cmd
+		ytdlpOut io.ReadCloser
+	)
+
+	isUrl := utils.IsUrl(source)
+
+	if isUrl {
+		ytdlp = exec.Command("yt-dlp", "--no-part", "--downloader", "ffmpeg",
+			"--buffer-size", "16K", "--limit-rate", "50K", "-o", "-", "-f", "bestaudio", source)
+		// since ytdlp is now source of ffmpeg command we need to change source
+		// to "-" so ffmpeg reads from pipe
+		source = "-"
+		ytdlpOut, err = ytdlp.StdoutPipe()
+		if err != nil {
+			return nil, err
+		}
+		if err := ytdlp.Start(); err != nil {
+			return nil, err
+		}
+
+		// FIXME: still sometimes skips to next song before current finished playing
+		// Prevent yt-dlp command to finish before ffmpeg is done reading its output
+		// go func() {
+		// 	if err := ytdlp.Wait(); err != nil {
+		// 		fmt.Println("error waiting for ytdlp to finish:", err)
+		// 	}
+		// }()
+
+		// NOTE: decided not to handle errors on ytdlp kill for now
+		defer ytdlp.Process.Kill()
+	}
+
+	ffmpeg = exec.Command("ffmpeg", "-i", source, "-f", "s16le", "-ar",
+		strconv.Itoa(frameRate), "-ac", strconv.Itoa(channels), "pipe:1")
+
+	if isUrl {
+		ffmpeg.Stdin = ytdlpOut
+	}
+
+	return ffmpeg, nil
 }

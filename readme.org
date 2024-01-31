@@ -22,8 +22,8 @@ All commands below should be prefixed with prefix that is set in =config.yml=
 - ~pf | playfolder <path>~ - Play music from local folder (bot hoster only).
 - ~pause~ - Pause current playback.
 - ~stop~ - Stop current playback, clears queue.
-- ~next | skip~ - Skip to next song assuming there is one.
-- ~skipto <index>~ - Skip to song with <index> (look it up in queue) assuming
+- ~next | skip~ - Skip to next track assuming there is one.
+- ~skipto <index>~ - Skip to track with <index> (look it up in queue) assuming
   there is one.
 - ~clear~ - Clear current queue.
 - ~leave~ - Leave the channel, clears queue, resets shuffle & repeat states.
@@ -51,9 +51,9 @@ aria2 but my aim was to keep this project minimal in terms of dependencies.
 - duration output in queue
 - cleanup on interrupt, many goroutines report error from audio package
 - after interrupting (or queue end):
-  - error nexting: either last song in the queue or no songs in it
-  - Error streaming: either last song in the queue or no songs in it
-- should each song has it's own 'playback' process in its struct? will it be
+  - error nexting: either last track in the queue or no tracks in it
+  - Error streaming: either last track in the queue or no tracks in it
+- should each track has it's own 'playback' process in its struct? will it be
   easier to manage playback then?
 - _commands_:
   - ~ping~ command to show actual ping
@@ -66,8 +66,8 @@ Error killing ffmpeg process: os: process already finished
 Error playing audio file:  read |0: file already closed
 Error killing ffmpeg process: os: process already finished
 Error playing audio file:  read |0: file already closed
-error nexting: either last song in the queue or no songs in it
-Error streaming: either last song in the queue or no songs in it
+error nexting: either last track in the queue or no tracks in it
+Error streaming: either last track in the queue or no tracks in it
 panic: runtime error: index out of range [1] with length 1
 
 goroutine 966 [running]:

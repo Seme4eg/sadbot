@@ -40,13 +40,13 @@ type Ctx struct {
 	S       *discordgo.Session
 	M       *discordgo.MessageCreate
 	Args    string
-	Streams *stream.Streams
+	Streams stream.Streams
 	Prefix  string
 }
 
 // return stream of the guild in which message event happened
 func (c *Ctx) stream() *stream.Stream {
-	if stream, ok := c.Streams.List[c.M.GuildID]; ok {
+	if stream, ok := c.Streams[c.M.GuildID]; ok {
 		return stream
 	}
 	// if no stream in given guild - return new one just to have access to methods
@@ -59,7 +59,7 @@ func (c *Ctx) stream() *stream.Stream {
 func Handle(
 	s *discordgo.Session,
 	m *discordgo.MessageCreate,
-	streams *stream.Streams,
+	streams stream.Streams,
 	prefix string,
 ) {
 	command := strings.TrimPrefix(m.Content, prefix)

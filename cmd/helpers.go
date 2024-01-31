@@ -56,7 +56,7 @@ func join(ctx Ctx) error {
 	}
 
 	// create new stream and add it to pool of all streams with given guild id
-	ctx.Streams.List[ctx.M.GuildID] = stream.New(c)
+	ctx.Streams[ctx.M.GuildID] = stream.New(c)
 
 	return nil
 }

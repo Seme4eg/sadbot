@@ -7,9 +7,9 @@ import (
 )
 
 // Play joins bot to voice if it is not in one. If no arguments passed calls
-// current stream Unpause method. Otherwise processes given query, calls current
-// stream Add method for each processed track. When done replies with currnet
-// queue. Then calls for Play method.
+// current stream 'resume' method. Otherwise processes given query, calls
+// current stream Add method for each processed track. When done replies with
+// currnet queue. Then calls for Play method.
 func Play(ctx Ctx) {
 	// Get the voice state for the given guild and user
 	_, err := ctx.S.State.VoiceState(ctx.M.GuildID, ctx.M.Author.ID)
@@ -32,7 +32,7 @@ func Play(ctx Ctx) {
 	args := strings.TrimSpace(ctx.Args)
 
 	if args == "" {
-		ctx.stream().Unpause()
+		ctx.stream().Resume()
 		return
 	}
 

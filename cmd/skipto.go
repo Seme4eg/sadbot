@@ -7,7 +7,7 @@ import (
 
 // Skipto checks if passed index is valid (convertable to int). If not
 // replies with correct command usage. Otherwise calls for current guild's
-// stream Skipto method outputting current song on success or error otherwise.
+// stream Skipto method outputting current track on success or error otherwise.
 func Skipto(ctx Ctx) {
 	err := requirePresence(ctx)
 	if err != nil {
@@ -17,7 +17,7 @@ func Skipto(ctx Ctx) {
 
 	index, err := strconv.Atoi(ctx.Args)
 	if err != nil {
-		ctx.reply("Usage: **skipto 5** where '5' is a song index that you can find with `queue` command.")
+		ctx.reply("Usage: **skipto 5** where '5' is a track index that you can find with `queue` command.")
 		return
 	}
 

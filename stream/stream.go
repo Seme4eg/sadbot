@@ -3,13 +3,14 @@ package stream
 import (
 	"errors"
 	"fmt"
-	"github.com/seme4eg/sadbot/utils"
+	"log"
 	"math/rand"
 	"sort"
 	"sync"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/seme4eg/sadbot/track"
 )
 
 type RepeatState string
@@ -20,89 +21,62 @@ const (
 	RepeatAll    RepeatState = "all"
 )
 
-// needed to wrap the 'List' it in struct to not lose it's pointer when passing
-// it around cuz then can't delete inactive streams
-type Streams struct {
-	// keys are guild ids since it seems reasonable to store 1 stream per guild
-	List map[string]*Stream
-}
+// Keys are guild IDs, 1 stream per guild.
+type Streams map[string]*Stream
 
 // Stream holds 1 stream per 1 guild, holds info about voice connection state,
 // and other 'player' stuff like queue etc
 type Stream struct {
-	// NOTE: when adding new field don't forget to reset it on events like
-	// leave, stop and clear
-	mu sync.Mutex // don't expose Lock and Unlock
-	V  *discordgo.VoiceConnection
-
-	Queue []Song
-	// index of currently playing song in queue (not song initial index that
-	// presents in Song struct)
-	SongIndex int
-
-	Playing bool
-	Repeat  RepeatState
-
-	// Channel which when being sent to stops current ffmpeg playback
-	Stop chan bool
-}
-
-type Song struct {
-	Title string
-	// source can be either Url or a path (if using playfolder command)
-	Source string
-	Index  int // initial index, used to 'unshuffle' suffled queue
-	// TODO: Duration string
+	mu      sync.Mutex
+	V       *discordgo.VoiceConnection
+	Queue   []*track.Track
+	current *track.Track
+	repeat  RepeatState
 }
 
 // New returns new stream struct
 func New(vc *discordgo.VoiceConnection) *Stream {
 	return &Stream{
 		V:      vc,
-		Stop:   make(chan bool),
-		Repeat: RepeatOff,
+		repeat: RepeatOff,
 	}
 }
 
-// Play starts playback of song with current SongIndex and attempts to skip
-// to next song in queue on current song end or on send event to Stop channel.
+// Play starts playback of the CurrentTrack and runs next when playback finished
 func (s *Stream) Play() error {
-	s.Playing = true
-
-	for len(s.Queue) > 0 && s.SongIndex >= 0 && s.SongIndex < len(s.Queue) && s.Playing {
-
-		done := make(chan bool)
-		// start playback function in background
-		go func() {
-			err := utils.PlayAudioFile(s.V, s.Queue[s.SongIndex].Source, s.Stop, &s.Playing)
-			if err != nil {
-				fmt.Println("Error playing audio file: ", err)
-			}
-			done <- true
-		}()
-
-		select {
-		// in case play function finished playing on its own (wasn't affected by
-		// user commands) - skip to next song
-		case <-done:
-			if s.Repeat != RepeatSingle {
-				if err := s.Next(); err != nil {
-					fmt.Println("error nexting:", err)
-					s.Playing = false
-					return err
-				}
-			}
-		case <-s.Stop:
-			// this case can happen only on user iteration, means we do not need
-			// to respect current Repeat state
-			s.Stop <- true // stop current ffmpeg process
-			// prevent ffmpeg processes from overlapping (especially on prev command)
-			time.Sleep(time.Millisecond * 350)
-			continue
-		}
+	if s.current == nil {
+		s.current = s.Queue[0]
 	}
 
-	s.Playing = false
+	// if function gets called repeatedly don't do anyhting
+	if s.current.IsPlaying() {
+		return nil
+	}
+
+	for len(s.Queue) > 0 && s.current.Index >= 0 && s.current.Index < len(s.Queue) {
+
+		c := make(chan error, 1)
+		c <- s.current.Play(s.V)
+
+		select {
+		case <-s.current.Done():
+			// this case can happen only on user interaction, means we do not need
+			// to respect current Repeat state
+			// prevent ffmpeg processes from overlapping (especially on prev command)
+			log.Println("DONE here")
+			time.Sleep(time.Millisecond * 350)
+			continue
+		// in case play function finished playing on its own (wasn't affected by
+		// user commands) - skip to next track
+		case err := <-c:
+			log.Println("Error playing audio file: ", err)
+			if s.repeat != RepeatSingle {
+				if err := s.Next(); err != nil {
+					return fmt.Errorf("error nexting: %s", err)
+				}
+			}
+		}
+	}
 
 	return nil
 }
@@ -110,155 +84,120 @@ func (s *Stream) Play() error {
 // Reset resets fields of current Stream except session and stop channel.
 // Stops possibly remaining ffmpeg process.
 func (s *Stream) Reset() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.Playing = false
 	s.Queue = s.Queue[:0]
-	s.SongIndex = 0
-	s.Repeat = RepeatOff
-	select {
-	case s.Stop <- true:
-	default:
-		fmt.Println("Stop Channel is closed")
-	}
+	s.current.Cancel()
+	s.current = nil
+	s.repeat = RepeatOff
 }
 
-// Clear empties queue and resets current song index to 0.
+// Clear empties queue and resets current track index to 0.
 func (s *Stream) Clear() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	s.Queue = s.Queue[:0]
-	s.SongIndex = 0
 }
 
-// Shuffle shuffles queue. Currently playing song will be 1st always in shuffled
+// Shuffle shuffles queue. Currently playing track will be 1st always in shuffled
 // queue.
 func (s *Stream) Shuffle() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	currentSong := s.Queue[s.SongIndex]
+	currentTrack := s.current
 	// create temporary 'queue' value that doesn't contain currently playing
 	// track since after each shuffle we want it to be still first in queue
-	temp := append(s.Queue[:s.SongIndex], s.Queue[s.SongIndex+1:]...)
+	temp := append(s.Queue[:s.current.Index], s.Queue[s.current.Index+1:]...)
 	rand.Shuffle(len(temp), func(i, j int) {
 		temp[i], temp[j] = temp[j], temp[i]
 	})
-	s.Queue = append([]Song{currentSong}, temp...)
-	s.SongIndex = 0
+	s.Queue = append([]*track.Track{currentTrack}, temp...)
 	fmt.Println(len(s.Queue), "len")
 }
 
-// Unshuffle sorts songs in queue by their initial index field.
+// Unshuffle sorts tracks in queue by their initial index field.
 func (s *Stream) UnShuffle() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	// get index of currently playing song
-	curIndex := s.Queue[s.SongIndex].Index
-
-	// sort queue in ascending order by index field
 	sort.Slice(s.Queue, func(i, j int) bool {
 		return s.Queue[i].Index < s.Queue[j].Index
 	})
-
-	// upate currently playing song index
-	for i, t := range s.Queue {
-		if t.Index == curIndex {
-			s.SongIndex = i
-			break
-		}
-	}
 }
 
 // SetRepeat sets current guild's stream repeat state to either
 // single / all or off.
 func (s *Stream) SetRepeat(state string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	switch val := RepeatState(state); val {
 	case RepeatSingle, RepeatAll, RepeatOff:
-		s.Repeat = val
+		s.repeat = val
 	default:
 		return errors.New("invalid repeat state passed")
 	}
 	return nil
 }
 
-// Next skips to next song unconditionally. Means even if user has set repeat
-// state to 'single' it will still skip to next song. Kills current playback by
+// Next skips to next track unconditionally. Means even if user has set repeat
+// state to 'single' it will still skip to next track. Kills current playback by
 // sending to Stop channel.
 func (s *Stream) Next() error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	// FIXME: somewhere here an error occurs and bot remains unoperational after
 	// queue has finished.
-	s.SongIndex++
+	index := s.current.Index + 1
 
-	if s.SongIndex >= len(s.Queue) {
-		switch s.Repeat {
+	if index >= len(s.Queue) {
+		switch s.repeat {
 		case RepeatAll:
-			s.SongIndex = 0
+			index = 0
 		case RepeatOff:
-			s.SongIndex--
-			return errors.New("either last song in the queue or no songs in it")
+			// index = s.CurrentTrack.Index - 1
+			return errors.New("either last track in the queue or no tracks in it")
 		}
 	}
 
-	s.Stop <- true
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.current.Cancel()
+	s.current = s.Queue[index]
 	return nil
 }
 
-// Prev skips to previous song unconditionally. Means even if user has set
-// repeat state to 'single' it will still skip to previous song. Kills current
+// Prev skips to previous track unconditionally. Means even if user has set
+// repeat state to 'single' it will still skip to previous track. Kills current
 // playback by sending to Stop channel.
 func (s *Stream) Prev() error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	index := s.current.Index - 1
 
-	s.SongIndex--
-
-	if s.SongIndex < 0 {
-		switch s.Repeat {
+	if index < 0 {
+		switch s.repeat {
 		case RepeatAll:
-			s.SongIndex = len(s.Queue) - 1
+			index = len(s.Queue) - 1
 		case RepeatOff:
-			s.SongIndex++
+			// index = s.CurrentTrack.Index + 1
 			return errors.New("nothing was played before")
 		}
 	}
 
-	s.Stop <- true
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.current.Cancel()
+	s.current = s.Queue[index]
 	return nil
 }
 
-// Current returns title of song with current SongIndex.
+// Current returns title of current track
 func (s *Stream) Current() string {
 	if len(s.Queue) == 0 {
 		return ""
 	}
-	return s.Queue[s.SongIndex].Title
+	return fmt.Sprint(s.current)
 }
 
-// Add appends new song with given Source and Title to queue.
-// REVIEW: how to add easier support for more fields
-func (s *Stream) Add(Source, Title string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.Queue = append(s.Queue, Song{Title, Source, len(s.Queue)})
+// Add adds new track with given source and title to queue.
+func (s *Stream) Add(source, title string) {
+	s.Queue = append(s.Queue, track.New(len(s.Queue), source, title))
 }
 
-// Skipto skips to song with given index.
+// Skipto skips to track with given index.
 func (s *Stream) Skipto(index int) error {
 	if index <= 0 || index > len(s.Queue) {
-		return errors.New("no song with such index")
+		return errors.New("no track with such index")
 	}
 
-	s.mu.Lock()
+	s.current.Cancel()
+	s.current = s.Queue[index]
 
-	s.SongIndex = index
-
-	s.mu.Unlock()
-	s.Stop <- true
 	return nil
 }
 
@@ -268,14 +207,12 @@ func (s *Stream) Disconnect() error {
 	return s.V.Disconnect()
 }
 
-// Pause sets Playing state to false effectively pausing current ffmpeg process
-// since the latter observes this flag.
+// Pause pauses currently playing track.
 func (s *Stream) Pause() {
-	s.Playing = false
+	s.current.Pause()
 }
 
-// Unpause sets playing flag to true effectively unpausing current ffmpeg
-// process since the latter observes this flag.
-func (s *Stream) Unpause() {
-	s.Playing = true
+// Resume resumes currently playing track.
+func (s *Stream) Resume() {
+	s.current.Resume()
 }

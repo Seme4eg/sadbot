@@ -20,10 +20,7 @@ func Queue(ctx Ctx) {
 
 	// 10 tracks per page (starting with 0 index)
 	perPage := 9
-	// needed for further format function, whether to number tracks 01 or 001
-	numLen := len(fmt.Sprint(len(ctx.stream().Queue)))
-	formatNum := "%0" + fmt.Sprint(numLen) + "d "
-	// initial page paginator will start with, is determined by current song index
+	// initial page paginator will start with, is determined by current track index
 	var page int
 
 	for i := 0; i < len(ctx.stream().Queue); i += perPage {
@@ -36,20 +33,15 @@ func Queue(ctx Ctx) {
 			float64(len(ctx.stream().Queue)-1)))
 
 		for j := i; j <= maxLen; j++ {
-			formatName := "**%s** – %s"
-			// change page & format for current song
-			if j == ctx.stream().SongIndex {
-				formatName = "**%s** – **%s**"
+			if ctx.stream().Queue[j].IsPlaying() {
 				page = j / perPage
 			}
-			field := discordgo.MessageEmbedField{
-				Value: fmt.Sprintf(formatName,
-					fmt.Sprintf(formatNum, j+1), ctx.stream().Queue[j].Title),
-			}
-			embed.Fields = append(embed.Fields, &field)
+
+			field := getField(j, ctx)
+			embed.Fields = append(embed.Fields, field)
 		}
 
-		// to start showing next page from new index and not repeat last song
+		// to start showing next page from new index and not repeat last track
 		// from previous page
 		i++
 
@@ -61,4 +53,16 @@ func Queue(ctx Ctx) {
 	// p.Handle("+", func() { ctx.S.ChannelMessageSend(ctx.M.ChannelID, "Hi!") })
 
 	p.Spawn(page)
+}
+
+func getField(index int, ctx Ctx) *discordgo.MessageEmbedField {
+	// needed for further format function, whether to number tracks 01 or 001
+	var (
+		numLen         = len(fmt.Sprint(len(ctx.stream().Queue)))
+		formatNum      = "%0" + fmt.Sprint(numLen) + "d "
+		formattedIndex = fmt.Sprintf(formatNum, index+1)
+	)
+	return &discordgo.MessageEmbedField{
+		Value: fmt.Sprintf("%s – %s", formattedIndex, ctx.stream().Queue[index]),
+	}
 }

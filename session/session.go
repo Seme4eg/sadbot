@@ -9,7 +9,7 @@ type Session struct {
 	Session *discordgo.Session
 	prefix  string
 	// map of all streams that contains one stream per one guild
-	Streams *stream.Streams
+	Streams stream.Streams
 }
 
 func new(token, prefix string) (*Session, error) {
@@ -20,7 +20,7 @@ func new(token, prefix string) (*Session, error) {
 	return &Session{
 		Session: ses,
 		prefix:  prefix,
-		Streams: &stream.Streams{List: make(map[string]*stream.Stream)},
+		Streams: make(map[string]*stream.Stream),
 	}, nil
 }
 
