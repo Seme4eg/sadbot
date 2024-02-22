@@ -67,7 +67,8 @@ func Handle(
 		return
 	}
 	name := strings.Fields(command)[0]
-	args := strings.TrimPrefix(command, name+" ")
+	args := strings.TrimPrefix(command, name)
+	args = strings.TrimSpace(args)
 
 	if command, ok := commands[strings.ToLower(name)]; ok {
 		ctx := Ctx{S: s, M: m, Args: args, Streams: streams, Prefix: prefix}

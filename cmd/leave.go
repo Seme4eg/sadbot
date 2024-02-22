@@ -21,7 +21,7 @@ func Leave(ctx Ctx) {
 			return
 		}
 		// delete stream of this guild from streams map
-		delete(ctx.Streams.List, ctx.M.GuildID)
+		delete(ctx.Streams, ctx.M.GuildID)
 	} else {
 		ctx.reply("You can check out any time you like, but you can never leave.")
 		return

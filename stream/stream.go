@@ -3,15 +3,14 @@ package stream
 import (
 	"errors"
 	"fmt"
-	"log"
 	"math/rand"
 	"sort"
-	"sync"
-	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/seme4eg/sadbot/track"
 )
+
+var ErrEmptyQueue = errors.New("empty queue")
 
 type RepeatState string
 
@@ -27,7 +26,6 @@ type Streams map[string]*Stream
 // Stream holds 1 stream per 1 guild, holds info about voice connection state,
 // and other 'player' stuff like queue etc
 type Stream struct {
-	mu      sync.Mutex
 	V       *discordgo.VoiceConnection
 	Queue   []*track.Track
 	current *track.Track
@@ -44,37 +42,40 @@ func New(vc *discordgo.VoiceConnection) *Stream {
 
 // Play starts playback of the CurrentTrack and runs next when playback finished
 func (s *Stream) Play() error {
+	if len(s.Queue) == 0 {
+		return ErrEmptyQueue
+	}
+
 	if s.current == nil {
 		s.current = s.Queue[0]
 	}
 
-	// if function gets called repeatedly don't do anyhting
 	if s.current.IsPlaying() {
 		return nil
 	}
 
-	for len(s.Queue) > 0 && s.current.Index >= 0 && s.current.Index < len(s.Queue) {
+	c := make(chan error, 1)
+	defer close(c)
+	go func() {
+		c <- s.current.Stream(s.V)
+	}()
 
-		c := make(chan error, 1)
-		c <- s.current.Play(s.V)
-
-		select {
-		case <-s.current.Done():
-			// this case can happen only on user interaction, means we do not need
-			// to respect current Repeat state
-			// prevent ffmpeg processes from overlapping (especially on prev command)
-			log.Println("DONE here")
-			time.Sleep(time.Millisecond * 350)
-			continue
+	if err, ok := <-c; ok {
+		fmt.Println("error:", err)
+		if err != nil {
+			if err == track.ErrManualStop {
+				fmt.Println("error manual")
+				return nil
+			}
+			// REVIEW: maybe just return err and prettify it outside ?
+			return fmt.Errorf("error playing audio file: %w", err)
+		}
 		// in case play function finished playing on its own (wasn't affected by
 		// user commands) - skip to next track
-		case err := <-c:
-			log.Println("Error playing audio file: ", err)
-			if s.repeat != RepeatSingle {
-				if err := s.Next(); err != nil {
-					return fmt.Errorf("error nexting: %s", err)
-				}
-			}
+		if s.repeat != RepeatSingle {
+			return s.Next()
+		} else {
+			s.Play()
 		}
 	}
 
@@ -85,7 +86,7 @@ func (s *Stream) Play() error {
 // Stops possibly remaining ffmpeg process.
 func (s *Stream) Reset() {
 	s.Queue = s.Queue[:0]
-	s.current.Cancel()
+	s.current.Stop()
 	s.current = nil
 	s.repeat = RepeatOff
 }
@@ -106,7 +107,6 @@ func (s *Stream) Shuffle() {
 		temp[i], temp[j] = temp[j], temp[i]
 	})
 	s.Queue = append([]*track.Track{currentTrack}, temp...)
-	fmt.Println(len(s.Queue), "len")
 }
 
 // Unshuffle sorts tracks in queue by their initial index field.
@@ -129,11 +129,13 @@ func (s *Stream) SetRepeat(state string) error {
 }
 
 // Next skips to next track unconditionally. Means even if user has set repeat
-// state to 'single' it will still skip to next track. Kills current playback by
-// sending to Stop channel.
+// state to 'single' it will still skip to next track. Stops current playback.
 func (s *Stream) Next() error {
 	// FIXME: somewhere here an error occurs and bot remains unoperational after
 	// queue has finished.
+	if len(s.Queue) == 0 {
+		return ErrEmptyQueue
+	}
 	index := s.current.Index + 1
 
 	if index >= len(s.Queue) {
@@ -142,14 +144,13 @@ func (s *Stream) Next() error {
 			index = 0
 		case RepeatOff:
 			// index = s.CurrentTrack.Index - 1
-			return errors.New("either last track in the queue or no tracks in it")
+			return errors.New("no next track")
 		}
 	}
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.current.Cancel()
+	s.current.Stop()
 	s.current = s.Queue[index]
+	s.Play()
 	return nil
 }
 
@@ -169,10 +170,9 @@ func (s *Stream) Prev() error {
 		}
 	}
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.current.Cancel()
+	s.current.Stop()
 	s.current = s.Queue[index]
+	s.Play()
 	return nil
 }
 
@@ -195,7 +195,7 @@ func (s *Stream) Skipto(index int) error {
 		return errors.New("no track with such index")
 	}
 
-	s.current.Cancel()
+	s.current.Stop()
 	s.current = s.Queue[index]
 
 	return nil

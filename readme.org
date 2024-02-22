@@ -43,6 +43,9 @@ All commands below should be prefixed with prefix that is set in =config.yml=
 aria2 but my aim was to keep this project minimal in terms of dependencies.
 
 ** Todos
+- use [[https://pkg.go.dev/context][context]] for play & stream functionality (nice [[https://pkg.go.dev/context#Context][example]] for Stream func)
+- use goroutines for each track and a select / for statement ?
+
 - Reply f-n now deletes prev message always, even if it's from prev session,
   which isn't a big deal, but is an unobvious behaviour, subject for fix
 - maybe add some more options to config? like how many tracks to show in queue?
